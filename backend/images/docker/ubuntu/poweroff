@@ -1,0 +1,3 @@
+#!/bin/bash
+#Mimic poweroff command by killing the sleep in the root of the container
+kill -9 `cat /etc/localcoda/entrypoint-blocking.pid`

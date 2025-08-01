@@ -1,0 +1,17 @@
+[Unit]
+Description=Localcoda service start (stopping it will cause container to die)
+After=network.target
+After=systemd-user-sessions.service
+After=network-online.target
+ 
+[Service]
+User=root
+WorkingDirectory=/root
+Type=oneshot
+PassEnvironment=LOCALCODA_OPTIONS
+ExecStart=/etc/localcoda/entrypoint.sh
+ExecStop=/bin/true
+RemainAfterExit=yes
+ 
+[Install]
+WantedBy=multi-user.target

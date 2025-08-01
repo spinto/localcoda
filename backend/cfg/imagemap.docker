@@ -1,0 +1,5 @@
+#Use the format <image-ID-in-tutorial> <image-name-plus-tag> <image-hostname> (spaces are not allowed in any of hte entries)
+ubuntu spinto/localcoda-docker-ubuntu:latest ubuntu
+ubuntu-4GB spinto/localcoda-docker-ubuntu:latest ubuntu
+kubernetes-kubeadm-1node spinto/localcoda-docker-k3s:latest controlplane
+kubernetes-kubeadm-1node-4GB spinto/localcoda-docker-k3s:latest controlplane

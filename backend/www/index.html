@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>localcoda</title>
+  <style>
+
+  @font-face {
+    font-family: Outfit;
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url(Outfit-VariableFont_wght.ttf) format("woff");
+    unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD
+  }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body, html {
+      height: 100%;
+      width: 100%;
+      font-family: Outfit,sans-serif!important;
+      overflow: hidden;
+    }
+
+    body {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 400;
+      line-height: 1.5;
+      color: rgb(85, 85, 85);
+      background-color: #fff;
+      text-align: start;
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: rgba(0,0,0,0)
+    }
+
+    p {
+      display: block;
+      margin-block-start: 1em;
+      margin-block-end: 1em;
+      margin-inline-start: 0px;
+      margin-inline-end: 0px;
+      margin-top: 0;
+      margin-bottom: 1rem;
+      unicode-bidi: isolate;
+    }
+
+    a {
+      color: rgb(13, 110, 253);
+      text-decoration: none;
+    }
+
+    ul {
+      display: block;
+      list-style-type: disc;
+      margin-block-start: 1em;
+      margin-block-end: 1em;
+      padding-inline-start: 40px;
+      unicode-bidi: isolate;
+    }
+    ol, ul, dl {
+      margin-top: 0;
+      margin-bottom: 1rem;
+    }
+    ol, ul {
+      padding-left: 2rem;
+    }
+
+    h6,.h6,h5,.h5,h4,.h4,h3,.h3,h2,.h2,h1,.h1 {
+      margin-top: 0;
+      margin-bottom: .5rem;
+      font-weight: 500;
+      line-height: 1.2;
+      color: rgb(85, 85, 85);
+    }
+    .start-button {
+      margin: -3px 0px 0px;
+      min-height: 51px;
+      min-width: 100px;
+      cursor: pointer;
+      float: right !important;
+      border-radius: 0 !important;
+      color: #000 !important;
+      background-color: #53d5ea;
+      box-shadow: none;
+      padding: 12px 40px;
+      font-size: 1.1rem;
+      display: block;
+      border: 0;
+      padding-right: 1.5rem !important;
+      padding-left: 1.5rem !important;
+      -webkit-appearance: button;
+      text-transform: none;
+      font-weight: 400;
+    }
+    .start-button:hover {
+      background-color: #1dc2e0;
+      -webkit-transition: background-color 300ms linear;
+      -ms-transition: background-color 300ms linear;
+      transition: background-color 300ms linear;
+
+    }
+    .next-button {
+      margin: -3px 0px 0px;
+      min-height: 51px;
+      min-width: 100px;
+      cursor: pointer;
+      float: right !important;
+      border-radius: 0 !important;
+      color: #fff !important;
+      background-color: #212529;
+      box-shadow: none;
+      padding: 12px 40px;
+      font-size: 1.1rem;
+      display: block;
+      border: 0;
+      padding-right: 1.5rem !important;
+      padding-left: 1.5rem !important;
+      -webkit-appearance: button;
+      text-transform: none;
+      font-weight: 400;
+    }
+    .next-button:hover {
+      background-color: #424649;
+      -webkit-transition: background-color 300ms linear;
+      -ms-transition: background-color 300ms linear;
+      transition: background-color 300ms linear;
+
+    }
+    .back-button {
+      margin: -3px 0px 0px;
+      min-height: 51px;
+      min-width: 100px;
+      cursor: pointer;
+      float: left !important;
+      border-radius: 0 !important;
+      color: #fff !important;
+      background-color: #212529;
+      box-shadow: none;
+      padding: 12px 40px;
+      font-size: 1.1rem;
+      display: block;
+      border: 0;
+      padding-right: 1.5rem !important;
+      padding-left: 1.5rem !important;
+      -webkit-appearance: button;
+      text-transform: none;
+      font-weight: 400;
+    }
+    .back-button:hover {
+      background-color: #424649;
+      -webkit-transition: background-color 300ms linear;
+      -ms-transition: background-color 300ms linear;
+      transition: background-color 300ms linear;
+
+    }
+    .extra-button {
+      margin: -3px 0px 0px;
+      min-height: 51px;
+      min-width: 100px;
+      cursor: pointer;
+      float: left !important;
+      border-radius: 0 !important;
+      color: #000 !important;
+      background-color: rgb(248, 249, 250);
+      box-shadow: none;
+      padding: 12px 40px;
+      font-size: 1.1rem;
+      display: block;
+      border: 0;
+      padding-right: 1.5rem !important;
+      padding-left: 1.5rem !important;
+      -webkit-appearance: button;
+      text-transform: none;
+      font-weight: 400;
+    }
+    .extra-button:hover {
+      background-color: rgb(211, 212, 213);
+      -webkit-transition: background-color 300ms linear;
+      -ms-transition: background-color 300ms linear;
+      transition: background-color 300ms linear;
+
+    }
+
+    /* Header */
+    .header {
+      background-color: black;
+      color: white;
+      padding: 10px 20px;
+      font-size: 20px;
+      height: 3rem;
+    }
+
+    /* Layout container */
+    .main {
+      display: flex;
+      height: calc(100% - 3rem); /* Adjust for header height */
+      width: 100%;
+    }
+
+    .panel-left {
+      padding: 0px;
+      overflow: auto;
+      width: 33.33%; /* Default width one-third */
+      min-width: 400px; /* Minimum width */
+      flex-shrink: 0;
+    }
+
+    .panel-right {
+      flex: 1;
+      min-width: 400px;
+    }
+
+     /* Make iframe fill right panel */
+    .panel-right iframe {
+      position: absolute;
+      width: 100%;
+      height: calc(100% - 70px);
+      border: none;
+    }
+
+    .tabs {
+      display: flex;
+    }
+    .tabs , .nav , .nav-item {
+      height: 20px !important;
+      border: 0;
+      font-size: 13px;
+      color: #fff;
+      background-color: #383838;
+    }
+
+    .nav {
+      --bs-nav-link-padding-x: 1rem;
+      --bs-nav-link-padding-y: .5rem;
+      display: flex;
+      flex-wrap: wrap;
+      padding-left: 0;
+      margin-bottom: 0;
+      list-style: none
+    }
+
+    .nav-item {
+      display: inline;
+      float: left;
+      padding-left: 10px;
+      padding-right: 10px;
+      cursor: pointer;
+    }
+
+    .nav-item-selected {
+      border-bottom: 1px solid white;
+    }
+
+    .tabs-right {
+      position: absolute;
+      right: 10px;
+    }
+
+
+
+    /* Resizer bar */
+    .resizer {
+      width: 5px;
+      cursor: col-resize;
+      background-color: #ccc;
+    }
+
+    /* markdown details */
+.scenario-content {
+    padding: 10px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    display: block;
+    font-size: 1.05rem;
+}
+
+.scenario-content hr {
+     visibility: hidden;
+}
+
+.scenario-content blockquote {
+    background: #daf2f8;
+    border-left: 10px solid #bce5ee;
+    margin: 1.5em 10px;
+    padding: .5em 10px;
+    quotes: "“" "”" "‘" "’"
+}
+
+.scenario-content blockquote p {
+    display: inline
+}
+
+.scenario-content .scenario-content-header h1,.scenario-content .scenario-content-header .h1 {
+    font-size: 1.75rem;
+    background: #000;
+    color: #fff;
+    padding: 10px;
+    text-align: center;
+    margin: 0 0 3px
+}
+
+.scenario-content .scenario-content-header h2,.scenario-content .scenario-content-header .h2 {
+    font-size: 1.4rem;
+    background: #eee;
+    color: #555;
+    padding: 10px;
+    text-align: center
+}
+
+.scenario-content .sectionContent {
+    padding-top: 20px
+}
+
+.scenario-content .sectionContent h1,.scenario-content .sectionContent .h1 {
+    font-size: 2rem;
+    padding-bottom: 5px
+}
+
+.scenario-content .sectionContent h2,.scenario-content .sectionContent .h2 {
+    font-size: 1.75rem;
+    padding-bottom: 5px
+}
+
+.scenario-content .sectionContent h3,.scenario-content .sectionContent .h3 {
+    font-size: 1.5rem;
+    padding-bottom: 5px
+}
+
+.scenario-content .sectionContent h4,.scenario-content .sectionContent .h4 {
+    font-size: 1.25rem;
+    padding-bottom: 5px
+}
+
+.scenario-content .sectionContent h5,.scenario-content .sectionContent .h5 {
+    font-size: 1rem;
+    padding-bottom: 5px
+}
+
+.scenario-content .sectionContent h6,.scenario-content .sectionContent .h6 {
+    font-size: .75rem;
+    padding-bottom: 5px
+}
+
+.scenario-content .sectionContent img {
+    max-width: 100%
+}
+
+.scenario-content .sectionContent table {
+    width: 100%;
+    margin-bottom: 1rem;
+    border-collapse: collapse!important
+}
+
+.scenario-content .sectionContent table td,.scenario-content .sectionContent table th {
+    padding: .75rem;
+    vertical-align: top;
+    background-color: #fff!important;
+    border: 1px solid #dee2e6!important
+}
+
+.scenario-content .sectionContent table th {
+    background-color: #eee!important
+}
+
+  .scenario-content code:not(pre code) {
+    padding: 3px;
+    margin: 0;
+    background-color: #f6f8fa;
+    border-radius: 3px;
+    font-size: 80%!important;
+    color: #396582;
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+
+  .scenario-content pre {
+    background-color: #f6f8fa;
+    padding: 5px;
+    border-radius: 10px;
+    font-size: 80%!important;
+    color: #2f3337;
+    margin-bottom: 1rem;
+    overflow-x: auto;
+  }
+
+  .scenario-content .copy, .scenario-content .exec {
+    cursor: pointer
+  }
+
+  .scenario-content .copy:hover {
+    outline: 1px solid #b5dcfd
+  }
+
+  .scenario-content .exec:hover {
+    outline: 1px solid #eade81
+  }
+
+  #toaster {
+    visibility: hidden;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 1px 6px;
+    position: absolute;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 9999;
+    pointer-events: none;
+    font-family: Outfit,sans-serif!important;
+    font-size: 80%;
+  }
+
+  </style>
+  <script>
+    function resizerMouseMove(e) {
+      const resizer = document.getElementById('resizer');
+      const leftPanel = resizer.previousElementSibling;
+      const rightPanel = resizer.nextElementSibling;
+
+      const containerLeft = leftPanel.parentElement.getBoundingClientRect().left;
+      let newWidth = e.clientX - containerLeft;
+
+      // Enforce minimum width of 200px
+      if (newWidth < 200) newWidth = 200;
+
+      // Enforce max width so right panel doesn't disappear (optional)
+      const containerWidth = leftPanel.parentElement.getBoundingClientRect().width;
+      if (newWidth > containerWidth - 100) newWidth = containerWidth - 100;
+
+      leftPanel.style.width = newWidth + 'px';
+      leftPanel.style.flex = 'none';
+    }
+    function resizerMouseDown() {
+        document.body.style.cursor = 'col-resize';
+        document.addEventListener('mousemove', resizerMouseMove);
+        document.addEventListener('mouseup', resizerMouseUp);
+	for (let i=1;i<=tabsl;i++){
+          document.getElementById('y'+i.toString()).style.pointerEvents='none';
+        }
+    }
+    function resizerMouseUp() {
+      document.body.style.cursor = 'default';
+      document.removeEventListener('mousemove', resizerMouseMove);
+      document.removeEventListener('mouseup', resizerMouseUp);
+      for (let i=1;i<=tabsl;i++){
+        document.getElementById('y'+i.toString()).style.pointerEvents='auto';
+      }
+    }
+  </script>
+  <script src="showdown.min.js"></script>
+  <script>
+    let options={};
+    let tutorial_index={};
+    let tutorial_basedir="";
+    async function startup() {
+      //Load options
+      try {
+        const response = await fetch('../options.json');  // Load JSON file
+        if (!response.ok) throw new Error('Network response was not ok');
+        options = await response.json();         // Parse JSON data
+        options['ext_proxyhost']=options['ext_proxyhost'].replace('PORT','$1')
+      } catch (error) {
+        document.getElementById('t').textContent = 'Failed to load options: ' + error.message;
+        return;
+      }
+      //load tutorial index file
+      try {
+        const response = await fetch('../t/'+options['index_file']);  // Load JSON file
+        if (!response.ok) throw new Error('Network response was not ok');
+        tutorial_index = await response.json();         // Parse JSON data
+
+      } catch (error) {
+        document.getElementById('t').textContent = 'Failed to load tutorial: ' + error.message;
+        return;
+      }
+      //Set tutorial base directory for loading stuff
+      tutorial_basedir='../t/'+options['index_file']; tutorial_basedir=tutorial_basedir.substr(0, tutorial_basedir.lastIndexOf('/'))+'/';
+      //load intro
+      loadPage(-1);
+      //load remaining time
+      remainTime()
+      setInterval(remainTime,60000)
+    }
+    function remainTime(){
+      if(options['max_time']==-1){
+        remaining_seconds=Math.floor(new Date().getTime() / 1000)-options['start_time'];
+      }else{
+        remaining_seconds=options['start_time'] + options['max_time'] - Math.floor(new Date().getTime() / 1000);
+      }
+      hours = Math.floor(remaining_seconds / 3600);
+      minutes = Math.floor((remaining_seconds - (hours * 3600)) / 60);
+      rt='';
+      if(hours > 0) {
+        rt=hours.toString() +' hours ';
+      }
+      rt=rt+minutes.toString()+' min';
+      if(options['max_time']==-1){
+        rt=rt+' elapsed';
+      }
+      document.getElementById('info_time').innerText=rt;
+    }
+    var converter = new showdown.Converter({omitExtraWLInCodeBlocks: true,ghCodeBlocks: false,noHeaderId: true,headerLevelStart: 3,tables: true,tasklists: true,openLinksInNewWindow:true,emoji:true});
+    converter.setFlavor('github');
+    async function loadPage(n) {
+      md='';
+      nl=tutorial_index['details']['steps'].length;
+      if(n==-1) {
+        if('intro' in tutorial_index['details']){
+          page_md_path=tutorial_index['details']['intro']['text'];
+	        page_title=tutorial_index['details']['intro']['title'];
+        }else{
+          md=' ';
+        }
+      }else if(n<nl){
+	      page_md_path=tutorial_index['details']['steps'][n]['text'];
+        page_title=tutorial_index['details']['steps'][n]['title'];
+      }else{
+        if('finish' in tutorial_index['details']){
+          page_md_path=tutorial_index['details']['finish']['text'];
+          page_title=tutorial_index['details']['finish']['title'];
+        }else{
+          md='You reached THE END of this scenario'
+        }
+      }
+      //load page content (if you need to)
+      if(md==''){
+        try {
+          const response = await fetch(tutorial_basedir+page_md_path);  // Load JSON file
+          if (!response.ok) throw new Error('Network response was not ok');
+          md = await response.text();         // Parse JSON data
+          //replace traffic ports
+          md = md.replace(/{{TRAFFIC_HOST1_([0-9]+?)}}/g,options['ext_proxyhost']);
+          //convert markdown to html
+          md=converter.makeHtml(md);
+          //default actions for inline is copy it
+          md = md.replace(/<code[^>]*>(.*?)<\/code>[^<{]/g, '<code class="copy">$1</code>');
+          //replace custom markdown codes (code with class)
+          md = md.replace(/<pre><code[^>]*>(.*?)<\/code><\/pre>\n<p>{{([a-z ]+?)}}<\/p>/sg, '<pre class="$2""><code>$1</code></pre>');
+          md = md.replace(/<code[^>]*>(.*?)<\/code>{{([a-z ]+?)}}/g, '<code class="$2">$1</code>');
+          //code without class (no action)
+          md = md.replace(/<pre><code[^>]*>(.*?)<\/code><\/pre>\n<p>{{}}<\/p>/sg, '<pre><code>$1</code></pre>');
+          md = md.replace(/<code[^>]*>(.*?)<\/code>{{}}/g, '<code>$1</code>');
+        } catch (error) {
+          document.getElementById('t').textContent = 'Failed to load tutorial page: ' + error.message;
+          return;
+        }
+      }
+
+      //update page html
+      pagehtml='<span><div class="scenario-content"><span class="scenario-content-header"><h1>'+tutorial_index['title']+'</h1>';
+      if(n>-1&&n<nl) { pagehtml=pagehtml+'<h2>'+page_title+'</h2>'; }
+      pagehtml=pagehtml+'</span><div class="sectionContent">'+md+'</div></div>';
+      pagehtml=pagehtml+'<div style="margin: 0px 20px 50px 20px;"><br><div>';
+      if(n==-1){
+        pagehtml=pagehtml+'<button class="start-button" onclick="loadPage('+(n+1).toString()+')"><span>START</span></button>';
+      }else if(n<nl){
+    	  if(n>0){
+          pagehtml=pagehtml+'<button class="back-button" onclick="loadPage('+(n-1).toString()+')"><span>BACK</span></button>';
+        }
+        pagehtml=pagehtml+'<button class="next-button" onclick="loadPage('+(n+1).toString()+')"><span>NEXT</span></button>';
+      }else{
+        pagehtml=pagehtml+'<button class="back-button" onclick="loadPage('+(n-1).toString()+')"><span>START</span></button>';
+        pagehtml=pagehtml+'<button class="extra-button" onclick="window.location=window.location;"><span>RESTART</span></button>';
+        pagehtml=pagehtml+'<button class="extra-button" onclick="window.location=\\"/\\";"><span>SCENARIOS</span></button>';
+        pagehtml=pagehtml+'<button class="extra-button" onclick="contact();"><span>FEEDBACK</span></button>';
+      }
+      pagehtml=pagehtml+'</div><div>&nbsp;</div></div></div></span>';
+      document.getElementById('t').innerHTML=pagehtml;
+
+      //update events for copy and exec
+      Array.from(document.getElementsByClassName('exec')).concat(Array.from(document.getElementsByClassName('copy'))).forEach((a) => {a.onmouseenter=()=>{me(a);};a.onmouseleave=ml;a.onclick=()=>{pc(a)};});
+      
+    }
+    //parse classes to execute events on click from the markdown
+    function pc(e){
+      if(e.classList.contains('copy')) {
+	      copyText(e.textContent);	
+      }
+      if(e.classList.contains('interrupt')) {
+        document.getElementById('y'+tabsl.toString()).contentDocument.querySelector("textarea.xterm-helper-textarea").dispatchEvent(new KeyboardEvent('keypress', {charCode: 3}));
+      }
+      if(e.classList.contains('exec')) {
+        document.getElementById('y'+tabsl.toString()).contentWindow.term.paste(e.textContent);
+        document.getElementById('y'+tabsl.toString()).contentDocument.querySelector("textarea.xterm-helper-textarea").dispatchEvent(new KeyboardEvent('keypress', {charCode: 13}));
+      }
+      ml();
+    }
+    //toaster location mouseover event
+    function me(e){
+      const tst = document.getElementById('toaster');
+      //set toaster visible
+      tst.style.visibility='visible';
+      tst.style.opacity=1;
+      //set element content
+      if(e.classList.contains('exec')){
+        tst.innerHTML="exec &#10142;";
+      }else if(e.classList.contains('copy')){
+        tst.innerHTML="copy &#10063;";
+      }else if(e.id='info_time'){
+        if(options['max_time']==-1){
+          tst.innerHTML="This scenario will not expire.<br/>To shut it down manually, run 'poweroff' in the shell.";
+        }else{
+          tst.innerHTML="Time till the environment expires. Be careful. You cannot extend it!";
+        }
+      }else{
+        tst.innerHTML="invalid";
+      }
+      //set absolute position of element
+      const rect = e.getBoundingClientRect();
+      eleft=(rect.left + rect.right - tst.clientWidth)/2 + window.scrollX;
+      etop=rect.bottom + window.scrollY;
+      tst.style.left=eleft+'px';
+      tst.style.top="calc("+etop+"px + 0.5rem)";
+
+    }
+    function ml(){
+      const tst = document.getElementById('toaster');
+      tst.style.visibility='hidden';
+      tst.style.opacity=0;
+    }
+    
+function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    // Modern API, works only in secure contexts (HTTPS)
+    navigator.clipboard.writeText(text).catch(err => {
+      //console.error("Failed to copy with Clipboard API, falling back:", err);
+      fallbackCopyText(text);
+    });
+  } else {
+    // Fallback for HTTP or insecure contexts
+    fallbackCopyText(text);
+  }
+}
+
+function fallbackCopyText(text) {
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+
+  // Hide the textarea off-screen
+  textarea.style.position = "fixed";
+  textarea.style.top = 0;
+  textarea.style.left = 0;
+  textarea.style.width = "2em";
+  textarea.style.height = "2em";
+  textarea.style.padding = 0;
+  textarea.style.border = "none";
+  textarea.style.outline = "none";
+  textarea.style.boxShadow = "none";
+  textarea.style.background = "transparent";
+
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+
+  try {
+    const successful = document.execCommand("copy");
+    if (successful) {
+      //console.log("Fallback: Copied to clipboard!");
+    } else {
+      console.error("Fallback: Copy command was unsuccessful");
+    }
+  } catch (err) {
+    console.error("Fallback: Copy command failed", err);
+  }
+
+  document.body.removeChild(textarea);
+}
+
+function contact(){
+  alert("not implemented");
+}
+
+let tabsn=1
+let tabsl=1
+function nt(){
+  //Create new tab elements
+  tabsn=tabsn+1;
+  nb=document.getElementById('nav');
+  ne = document.createElement("li");
+  ne.classList.add('nav-item');
+  ne.onclick=(()=>{st(tabsn);});
+  ne.innerText='Tab '+tabsn.toString();
+  ne.id='t'+tabsn.toString();
+  nb.insertBefore(ne,nb.childNodes[tabsn-1]);
+  nb=document.getElementById('right-panel');
+  ne = document.createElement("iframe");
+  ne.src='../y/';
+  ne.id='y'+tabsn.toString();
+  nb.appendChild(ne);
+  st(tabsn);
+}
+function st(nt){
+  if(tabsl==nt){return;}
+  ot=document.getElementById('t'+tabsl);
+  ot.classList.remove('nav-item-selected');
+  ot=document.getElementById('y'+tabsl);
+  ot.style.visibility='hidden';
+  tabsl=nt;
+  ot=document.getElementById('t'+tabsl);
+  ot.classList.add('nav-item-selected');
+  ot=document.getElementById('y'+tabsl);
+  ot.style.visibility='visible';
+}
+
+  </script>
+</head>
+<body onload="startup();">
+
+  <!-- Header -->
+  <div class="header">
+    localcoda
+  </div>
+  <!-- Toaster -->
+  <span id="toaster"></span>
+
+  <!-- Main Content -->
+  <div class="main">
+    <div class="panel-left" id="t">
+      <div style="padding:30px;">Loading scenario...</div>
+    </div>
+    <div class="resizer" id="resizer" onmousedown="resizerMouseDown();" onmouseup="resizerMouseUp();"></div>
+    <div class="panel-right" id="right-panel">
+      <div class="tabs">
+        <div class="tabs-left">
+          <ul class="nav-bar" id="nav"><li class="nav-item nav-item-selected" id="t1" onclick="st(1);">Tab 1</li><li class="nav-item" onclick="nt();"><b>+</b></li></ul>
+        </div>
+	<div class="tabs-right">
+          <ul class="nav-bar"><li class="nav-item" id="info_time" onmouseenter="me(this);" onmouseleave="ml();">unknown</li><li class="nav-item"><b>&#9776;</b></li></ul>
+        </div>
+      </div>
+      <iframe src="../y/" id="y1"></iframe>
+    </div>
+  </div>
+
+</body>
+</html>

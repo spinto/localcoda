@@ -9,8 +9,8 @@ TUTORIAL_MAX_TIME=-1
 TUTORIAL_EXIT_ON_DISCONNECT=false
 #External host name (for connection to the tutorial)
 EXT_MAINHOST=app.localcoda.com
-#External proxy host name (for connection to the tutorial, PORT will be replaced with the action port in use)
-EXT_PROXYHOST=app-PORT.localcoda.com
+#External proxy host scheme (for connection to the tutorial, \$PORT will be replaced with the actual port in use)
+EXT_PROXYHOST_SCHEME="app-\$LOCAL_UUID-\$PORT.localcoda.com"
 #Base directory for tutorials (if mounted locally)
 TUTORIALS_MOUNT_POINT=/data/tutorials
 ##Advanced configuration

@@ -162,7 +162,10 @@ if [[ -n "$INTRO_BACKGROUND" && "$INTRO_BACKGROUND" != "null" ]]; then
   BACKGROUND_FILE="`readlink -f "$SCENARIO_DIR/$INTRO_BACKGROUND"`"
   [[ -e "$BACKGROUND_FILE" ]] || error 12 "cannot access background file $BACKGROUND_FILE"
   echo "Starting background script $BACKGROUND_FILE, you can find its logs in /var/log/killercoda/"
+	cd /root
   nohup bash -i -x $BACKGROUND_FILE 1>/var/log/localcoda/background0_stdout.log 2>/var/log/localcoda/background0_stderr.log &
+else
+  echo "No background script to run"
 fi
 
 #Start webshell
@@ -171,6 +174,7 @@ INTRO_FOREGROUND="`jq -r .details.intro.foreground < $SCENARIO_FILE`"
 if [[ -n "$INTRO_FOREGROUND" && "$INTRO_FOREGROUND" != "null" && ! -e "/etc/localcoda/foreground_launcher.sh" ]]; then
   FOREGROUND_FILE="` readlink -f $SCENARIO_DIR/$INTRO_FOREGROUND`"
   [[ -e "$FOREGROUND_FILE" ]] || error 12 "cannot access foreground file $FOREGROUND_FILE"
+	echo "Foreground script is $FOREGROUND_FILE."
   echo '[[ -e /etc/localcoda/foreground_launcher.sh.done ]] && exec bash -i' > /etc/localcoda/foreground_launcher.sh
   cat $FOREGROUND_FILE >> /etc/localcoda/foreground_launcher.sh
   echo -e '\ntouch /etc/localcoda/foreground_launcher.sh.done\nexec bash -i' >> /etc/localcoda/foreground_launcher.sh
@@ -182,14 +186,16 @@ fi
 
 if [[ "$CLOSE_ON_EXIT" == "true" ]]; then
   #Wait for ttyd to terminate (which will do when all clients are disconnected), then poweroff
+	cd /root
   ttyd -i /etc/localcoda/ttyd.sock -q -W -b $INT_BASEPATH/y /bin/bash $FOREGROUND_SCRIPT &>/var/log/localcoda/webshell0.log
   echo "no more ttyd connections. shutting down..."
   poweroff
 else
   #Start in background then exit. Also, ttyd it should not terminate when all clients are disconnected.
+  cd /root 
   nohup ttyd -i /etc/localcoda/ttyd.sock -W -b $INT_BASEPATH/y /bin/bash $FOREGROUND_SCRIPT &>/var/log/localcoda/webshell0.log &
 fi
 
 #Exit correctly (and write the ready file)
-echo "http://$EXT_MAINHOST$INT_BASEPATH/w/" > /etc/localcoda/ready
+touch /etc/localcoda/ready
 exit 0

@@ -1,0 +1,25 @@
+{
+  "title": "Localcoda volume manager",
+  "description": "Add/edit or remove tutorials.",
+  "details": {
+    "intro": {
+      "text": "00-intro.md",
+      "title": "Intro",
+			"background": "initialize.sh"
+    },
+    "steps": [
+      {
+        "text": "01-add.md",
+        "title": "Adding a tutorial"
+      },
+      {
+        "text": "02-remove.md",
+        "title": "Removing a tutorial"
+      }
+    ]
+  },
+  "backend": {
+    "imageid": "ubuntu",
+		"mountmode": "rw"
+  }
+}

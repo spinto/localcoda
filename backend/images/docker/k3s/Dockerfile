@@ -1,7 +1,7 @@
 FROM ubuntu:24.04
 
 #Support for systemctl and modprobe in the container
-COPY journalctl systemctl /usr/bin
+COPY journalctl systemctl /usr/bin/
 
 #Add basic required packages
 RUN apt update && apt-get upgrade -y && DEBIAN_FRONTEND=noninteractive apt-get install -y kmod iproute2 iptables curl wget man vim sudo jq git gawk sed python3 bzip2 xz-utils 7zip zip unzip psmisc && apt clean all && rm -rf /var/lib/apt/lists/*

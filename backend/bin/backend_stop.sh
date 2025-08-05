@@ -32,13 +32,12 @@ source $APPDIR/cfg/conf
 APP_VERSION=0.0.1
 function usage {
   cat <<:usage
-localcoda backend ls version $APP_VERSION
+localcoda backend stop version $APP_VERSION
 Usage:
-  backend_ls [options] [uuid]
+  backend_stop [options] <uuid>
 
 Where the arguments are:
-  <uuid>         optional. Query for a custom uuid, instead of checking all the possible
-                 uuids
+  <uuid>         Stop the tutorial for the given uuid. Mandatory
 
 Options:
   -h             displays this help page
@@ -48,6 +47,7 @@ Options:
   exit 1
 }
 
+[[ -z "$1" ]] && usage
 LOCAL_UUID=
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -62,8 +62,9 @@ while [[ "$#" -gt 0 ]]; do
     ;;
   esac
 done
+[[ -z "$LOCAL_UUID" ]] && error "Please specify a UUID to delete"
 #Check required configuration is set
-check_env ORCHESTRATION_ENGINE EXECUTION_NAME_SCHEME 
+check_env ORCHESTRATION_ENGINE EXECUTION_NAME_SCHEME
 if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
   check_sw docker
 	check_env LOCAL_IPPORT
@@ -74,40 +75,17 @@ else
 	error 2 "Orchestration engine $ORCHESTRATION_ENGINE is invalid!"
 fi
 
-#Calculate dynamic paths
-eval INT_BASEPATH=$INT_BASEPATH_SCHEME
+#Set defaults
 eval EXECUTION_NAME=$EXECUTION_NAME_SCHEME
 
 #Use the orchestration engine to run the backend instance
 if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
-
-  {
-    echo "UUID|Backend instance|Ready" 
-    docker ps -f "name=$EXECUTION_NAME" --format '{{.Names}}' | while read cn; do
-      #get info from container
-      docker exec $cn /bin/bash -c '[[ -e /etc/localcoda/ready ]]'
-      if [[ $? -ne 0 ]]; then
-        rs=
-      else
-        rs=`docker inspect $cn --format '{{ index .Config.Labels "readyurl" }}'`
-        iid=`docker inspect $cn --format '{{ index .Config.Labels "instanceid" }}'`
-      fi
-      echo "$iid|$cn|$rs"
-    done
-  } | column -t -s '|'
+  docker stop $EXECUTION_NAME
 
 elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
-  {
-    echo "UUID|Backend instance|Ready"
-		kubectl get pods -n "$KUBERNETES_NAMESPACE" -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.conditions[?(@.type=="Ready")].status}{" "}{.metadata.annotations.readyurl}{" "}{.metadata.labels.localcoda-instanceid}{"\n"}{end}' | grep ^$EXECUTION_NAME | while read cn rs ru iid; do
-      #get info from container
-      if [[ "$rs" != "True" ]]; then
-        rs=
-      fi
-      echo "$iid|$cn|$ru"
-    done
-  } | column -t -s '|'
- 
+  
+	kubectl -n "$KUBERNETES_NAMESPACE" delete pod/$EXECUTION_NAME service/$EXECUTION_NAME ingress/$EXECUTION_NAME-app ingress/$EXECUTION_NAME-proxy
+
 fi
 #all done correctly if we are at this point
 exit 0

@@ -2,15 +2,15 @@
 #Allowed virtualization engines supported at the moment are docker or sysbox
 VIRT_ENGINE=docker
 #Allowed orchestration engines supported at the moment are local and kubernetes
-ORCHESTRATION_ENGINE=kubernetes
+ORCHESTRATION_ENGINE=local
 #Default tutorial duration (in seconds). Set to "-1" to disable.
 TUTORIAL_MAX_TIME=-1
 #Exit upon disconnect. If true, terminates the tutorial if client disconnects (e.g. closes browser page).
 TUTORIAL_EXIT_ON_DISCONNECT=false
 #External host name (for connection to the tutorial)
-EXT_MAINHOST=localcoda.eoepca-sciencehub.esa.int
+EXT_MAINHOST=app.localcoda.com
 #External proxy host scheme (for connection to the tutorial, \$PORT will be replaced with the actual port in use)
-EXT_PROXYHOST_SCHEME="\$PORT-\$LOCAL_UUID-localcoda.eoepca-sciencehub.esa.int"
+EXT_PROXYHOST_SCHEME="\$PORT-\$LOCAL_UUID-app.localcoda.com"
 ##Advanced configuration - GENERAL
 #Image basemap files for different virtualization engines (you need to change the content of this file to add additional images or use different images in your tutorials).
 IMAGES_DOCKER_MAPFILE=cfg/imagemap.docker

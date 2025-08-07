@@ -85,6 +85,11 @@ http {
   default_type application/octet-stream;
   access_log /var/log/localcoda/nginx_access.log;
 
+  map \$http_upgrade \$connection_upgrade {
+    default upgrade;
+    '' close;
+  }
+
   #Catch-all server for unspecified host
   server {
     listen      $EXT_LISTENPORT default_server;
@@ -98,7 +103,7 @@ http {
       proxy_pass http://unix:/etc/localcoda/ttyd.sock;
       proxy_http_version 1.1;
       proxy_set_header Upgrade \$http_upgrade;
-      proxy_set_header Connection "upgrade";
+      proxy_set_header Connection \$connection_upgrade;
     }
     location $INT_BASEPATH/w/ {
       alias $WWW_DIR/;
@@ -112,17 +117,26 @@ http {
       autoindex off;
     }
     location / {
-      return 302 \$scheme://\$host$INT_BASEPATH/w/;
+      return 302 \$scheme://$EXT_MAINHOST$INT_BASEPATH/w/;
     }
     location = /favicon.ico {
-      return 302 \$scheme://\$host$INT_BASEPATH/w/favicon.ico;
+      return 302 \$scheme://$EXT_MAINHOST$INT_BASEPATH/w/favicon.ico;
     }
   }
   server {
+
     listen $EXT_LISTENPORT;
     server_name $EXT_PROXYHOST_REGEX;
     location / {
       proxy_pass http://127.0.0.1:\$redport;
+      proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto \$scheme;
+      proxy_set_header Upgrade \$http_upgrade;
+      proxy_set_header Connection \$connection_upgrade;
+      proxy_redirect off;
+      proxy_buffering off;
+      proxy_hide_header access-control-allow-origin;
+      add_header Access-Control-Allow-Origin *;
     }
   }
 }

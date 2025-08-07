@@ -43,15 +43,20 @@ Options:
   -h             displays this help page
   -o <key>=<val> override the configuration option (in the $APPDIR/cfg/conf file). See
                  the content of the $APPDIR/cfg/conf file for specific options to override
+  -U <username>  the running instance given <username>. Required if a username is assigned.
+                 Useful if you are managing multi-tenant executions
+
 :usage
   exit 1
 }
 
 [[ -z "$1" ]] && usage
 LOCAL_UUID=
+INSTANCE_USERNAME=
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
    -o) eval "$2"; shift 2 ;;
+   -U) INSTANCE_USERNAME="$2"; shift 2 ;;
    -h | --help) usage ;;
    *) if [[ -z "$LOCAL_UUID" ]]; then
 	      LOCAL_UUID="$1"
@@ -62,7 +67,7 @@ while [[ "$#" -gt 0 ]]; do
     ;;
   esac
 done
-[[ -z "$LOCAL_UUID" ]] && error "Please specify a UUID to delete"
+[[ -z "$LOCAL_UUID" ]] && error 1 "Please specify a UUID to delete"
 #Check required configuration is set
 check_env ORCHESTRATION_ENGINE EXECUTION_NAME_SCHEME
 if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
@@ -80,12 +85,15 @@ eval EXECUTION_NAME=$EXECUTION_NAME_SCHEME
 
 #Use the orchestration engine to run the backend instance
 if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
+  #Check if container is owned by the user otherwise throw error
+  [[ -n "$INSTANCE_USERNAME" && "`docker inspect --format='{{ index .Config.Labels "user" }}' $EXECUTION_NAME`" != "$INSTANCE_USERNAME" ]] && error 33 "Container does not exist for this user!"
   docker stop $EXECUTION_NAME
+  exit $?
 
 elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
-  
-	kubectl -n "$KUBERNETES_NAMESPACE" delete pod/$EXECUTION_NAME service/$EXECUTION_NAME ingress/$EXECUTION_NAME-app ingress/$EXECUTION_NAME-proxy
+  #Check if job is owned by the user otherwise throw error
+  [[ -n "$INSTANCE_USERNAME" && "`kubectl get -n "$KUBERNETES_NAMESPACE" -o jsonpath='{.items[0].metadata.labels.localcoda-user}' -l "job-name=$EXECUTION_NAME" pod`" != "$INSTANCE_USERNAME" ]] && error 33 "Container does not exist for this user!"
+	kubectl -n "$KUBERNETES_NAMESPACE" delete job/$EXECUTION_NAME
+  exit $?
 
 fi
-#all done correctly if we are at this point
-exit 0

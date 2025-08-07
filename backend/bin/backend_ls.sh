@@ -44,14 +44,18 @@ Options:
   -h             displays this help page
   -o <key>=<val> override the configuration option (in the $APPDIR/cfg/conf file). See
                  the content of the $APPDIR/cfg/conf file for specific options to override
+  -U <username>  filter running instance by a given <username>. Useful if you are managing
+                 multi-tenant executions
 :usage
   exit 1
 }
 
 LOCAL_UUID=
+INSTANCE_USERNAME=
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
    -o) eval "$2"; shift 2 ;;
+   -U) INSTANCE_USERNAME="$2"; shift 2 ;;
    -h | --help) usage ;;
    *) if [[ -z "$LOCAL_UUID" ]]; then
 	      LOCAL_UUID="$1"
@@ -82,29 +86,34 @@ eval EXECUTION_NAME=$EXECUTION_NAME_SCHEME
 if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
 
   {
-    echo "UUID|Backend instance|Ready" 
-    docker ps -f "name=$EXECUTION_NAME" --format '{{.Names}}' | while read cn; do
+    echo "UUID|User|Backend instance|Ready"
+    DOCKER_EXTRA_SEL=
+    [[ -n "$INSTANCE_USERNAME" ]] && DOCKER_EXTRA_SEL="-f label=user=$INSTANCE_USERNAME"
+    docker ps -f "name=$EXECUTION_NAME" $DOCKER_EXTRA_SEL --format '{{.Names}}' | while read cn; do
       #get info from container
       docker exec $cn /bin/bash -c '[[ -e /etc/localcoda/ready ]]'
       if [[ $? -ne 0 ]]; then
         rs=
       else
         rs=`docker inspect $cn --format '{{ index .Config.Labels "readyurl" }}'`
-        iid=`docker inspect $cn --format '{{ index .Config.Labels "instanceid" }}'`
       fi
-      echo "$iid|$cn|$rs"
+      iid=`docker inspect $cn --format '{{ index .Config.Labels "instanceid" }}'`
+      un="\"`docker inspect $cn --format '{{ index .Config.Labels "user" }}'`\""
+      echo "$iid|$un|$cn|$rs"
     done
   } | column -t -s '|'
 
 elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
   {
-    echo "UUID|Backend instance|Ready"
-		kubectl get pods -n "$KUBERNETES_NAMESPACE" -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.conditions[?(@.type=="Ready")].status}{" "}{.metadata.annotations.readyurl}{" "}{.metadata.labels.localcoda-instanceid}{"\n"}{end}' | grep ^$EXECUTION_NAME | while read cn rs ru iid; do
+    echo "UUID|User|Backend instance|Ready"
+    KUBECTL_EXTRA_SEL=
+    [[ -n "$INSTANCE_USERNAME" ]] && KUBECTL_EXTRA_SEL=",localcoda-user=$INSTANCE_USERNAME"
+		kubectl get pod -n "$KUBERNETES_NAMESPACE" --selector=localcoda-instanceid,job-name$KUBECTL_EXTRA_SEL -o jsonpath='{range .items[*]}{.metadata.labels.job-name}{" "}{.status.conditions[?(@.type=="Ready")].status}{" "}{.metadata.annotations.readyurl}{" "}{.metadata.labels.localcoda-instanceid}{" \""}{.metadata.labels.localcoda-user}{"\"\n"}{end}' | grep ^$EXECUTION_NAME | while read cn rs ru iid un; do
       #get info from container
       if [[ "$rs" != "True" ]]; then
         rs=
       fi
-      echo "$iid|$cn|$ru"
+      echo "$iid|$un|$cn|$ru"
     done
   } | column -t -s '|'
  

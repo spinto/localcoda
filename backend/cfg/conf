@@ -2,15 +2,15 @@
 #Allowed virtualization engines supported at the moment are docker or sysbox
 VIRT_ENGINE=docker
 #Allowed orchestration engines supported at the moment are local and kubernetes
-ORCHESTRATION_ENGINE=kubernetes
+ORCHESTRATION_ENGINE=local
 #Default tutorial duration (in seconds). Set to "-1" to disable.
 TUTORIAL_MAX_TIME=-1
 #Exit upon disconnect. If true, terminates the tutorial if client disconnects (e.g. closes browser page).
 TUTORIAL_EXIT_ON_DISCONNECT=false
 #External host name (for connection to the tutorial)
-EXT_MAINHOST=localcoda.eoepca-sciencehub.esa.int
+EXT_MAINHOST=app.localcoda.com
 #External proxy host scheme (for connection to the tutorial, \$PORT will be replaced with the actual port in use)
-EXT_PROXYHOST_SCHEME="\$PORT-\$LOCAL_UUID-localcoda.eoepca-sciencehub.esa.int"
+EXT_PROXYHOST_SCHEME="\$PORT-\$LOCAL_UUID-app.localcoda.com"
 ##Advanced configuration - GENERAL
 #Image basemap files for different virtualization engines (you need to change the content of this file to add additional images or use different images in your tutorials).
 IMAGES_DOCKER_MAPFILE=cfg/imagemap.docker
@@ -20,7 +20,7 @@ REMOTE_PORT=1
 #Backend serving URL scheme (you should never change this, unless you know what you are doing)
 INT_BASEPATH_SCHEME="/run/\$LOCAL_UUID"
 #Backend orchestration execution identifier shcheme (you should never change this, unless you know what you are doing)
-EXECUTION_NAME_SCHEME="localcoda-\${VIRT_ENGINE}-backend-\$LOCAL_UUID"
+EXECUTION_NAME_SCHEME="localcoda-bk-\$LOCAL_UUID"
 #Tutorials volume/pvc name. If this is a PVC, it is created with ReadWriteMany (you should never change this, unless you know what you are doing)
 TUTORIALS_VOLUME=localcoda-tutorials
 #Local mount of the tutorials volume. If set, backend will check the volume againist this path, avoiding accessing the volume via specific containers. (you should never change this, unless you know what you are doing)
@@ -28,8 +28,8 @@ TUTORIALS_VOLUME_ACCESS_MOUNT=
 #Local volume access image to use. Must be set if TUTORIALS_VOLUME_ACCESS_MOUNT is not set. It is recommended to set TUTORIALS_VOLUME_ACCESS_MOUNT instead of this, otherwise you need to spawn a new container all the time you need to access a tutorial (you should never change this, unless you know what you are doing)
 TUTORIALS_VOLUME_ACCESS_IMAGE=busybox:latest
 ##Advanced configuration - LOCAL ORCHESTRATOR
-#Local orchestration engine mount port
-LOCAL_IPPORT=0.0.0.0:80
+#Local orchestration engine mount port. If you want to start multiple docker backends on the same machine you will need to set the port to \$RANDOM_PORT in order for the different containers not to clash. This will add also the port to the EXT_MAINHOST and EXT_PROXYHOST_SCHEME urls
+LOCAL_IPPORT=0.0.0.0:\$RANDOM_PORT
 ##Advanced configuration - KUBERNETES ORCHESTRATOR
 #Kubernetes namespace to deploy to
 KUBERNETES_NAMESPACE=default

@@ -64,8 +64,9 @@ echo "http://$EXT_PROXYHOST" > /etc/localcoda/host
 mkdir -p /var/log/localcoda/
 
 #Building nginx configuration
-EXT_PROXYHOST_REGEX="~^${EXT_PROXYHOST/PORT/(?<redport>[0-9]+)}$"
-EXT_PROXYHOST_REGEX="${EXT_PROXYHOST_REGEX//./\.}"
+EXT_PROXYHOST_REGEX="${EXT_PROXYHOST/PORT/(?<redport>[0-9]+)}"
+EXT_PROXYHOST_REGEX="${EXT_PROXYHOST_REGEX%:*}"
+EXT_PROXYHOST_REGEX="~^${EXT_PROXYHOST_REGEX//./\.}$"
 cat << EOF > /etc/localcoda/nginx.conf
 user root;
 worker_processes auto;
@@ -92,7 +93,7 @@ http {
   }
   server {
     listen $EXT_LISTENPORT;
-    server_name $EXT_MAINHOST;
+    server_name ${EXT_MAINHOST%:*};
     location $INT_BASEPATH/y/ {
       proxy_pass http://unix:/etc/localcoda/ttyd.sock;
       proxy_http_version 1.1;

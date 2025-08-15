@@ -683,19 +683,20 @@ let tabsl=1
 function nt(){
   //Create new tab elements
   tabsn=tabsn+1;
+  const currentTabNumber = tabsn;
   nb=document.getElementById('nav');
   ne = document.createElement("li");
   ne.classList.add('nav-item');
-  ne.onclick=(()=>{st(tabsn);});
-  ne.innerText='Tab '+tabsn.toString();
-  ne.id='t'+tabsn.toString();
-  nb.insertBefore(ne,nb.childNodes[tabsn-1]);
+  ne.onclick=(()=>{st(currentTabNumber);});
+  ne.innerText='Tab '+currentTabNumber.toString();
+  ne.id='t'+currentTabNumber.toString();
+  nb.insertBefore(ne,nb.childNodes[currentTabNumber-1]);
   nb=document.getElementById('right-panel');
   ne = document.createElement("iframe");
   ne.src='../y/';
-  ne.id='y'+tabsn.toString();
+  ne.id='y'+currentTabNumber.toString();
   nb.appendChild(ne);
-  st(tabsn);
+  st(currentTabNumber);
 }
 function st(nt){
   if(tabsl==nt){return;}

@@ -255,6 +255,20 @@
       cursor: pointer;
     }
 
+    .nav-item .close-tab {
+      margin-left: 5px;
+      padding: 0 4px;
+      color: #999;
+      font-weight: normal;
+      cursor: pointer;
+      display: inline-block;
+    }
+    .nav-item .close-tab:hover {
+      color: #fff;
+      background-color: #555;
+      border-radius: 2px;
+    }
+
     .nav-item-selected {
       border-bottom: 1px solid white;
     }
@@ -683,19 +697,21 @@ let tabsl=1
 function nt(){
   //Create new tab elements
   tabsn=tabsn+1;
+  const currentTabNumber = tabsn;
   nb=document.getElementById('nav');
   ne = document.createElement("li");
   ne.classList.add('nav-item');
-  ne.onclick=(()=>{st(tabsn);});
-  ne.innerText='Tab '+tabsn.toString();
-  ne.id='t'+tabsn.toString();
-  nb.insertBefore(ne,nb.childNodes[tabsn-1]);
+  ne.onclick=((e)=>{if(e.button!==1) st(currentTabNumber);});
+  ne.onmousedown=((e)=>{if(e.button===1){ct(currentTabNumber,e);e.preventDefault();}});  
+  ne.innerHTML='Tab '+currentTabNumber.toString()+' <span class="close-tab" onclick="ct('+currentTabNumber+',event);">×</span>';
+  ne.id='t'+currentTabNumber.toString();
+  nb.insertBefore(ne, nb.lastElementChild);
   nb=document.getElementById('right-panel');
   ne = document.createElement("iframe");
   ne.src='../y/';
-  ne.id='y'+tabsn.toString();
+  ne.id='y'+currentTabNumber.toString();
   nb.appendChild(ne);
-  st(tabsn);
+  st(currentTabNumber);
 }
 function st(nt){
   if(tabsl==nt){return;}
@@ -708,6 +724,29 @@ function st(nt){
   ot.classList.add('nav-item-selected');
   ot=document.getElementById('y'+tabsl);
   ot.style.visibility='visible';
+}
+
+function ct(tabNum, event) {
+  event.stopPropagation();
+
+  // always keep one tab open
+  const tabs = document.querySelectorAll('.nav-item[id^="t"]');
+  if (tabs.length <= 1) return;
+
+  if (!confirm('Close Tab ' + tabNum + '?')) return;
+
+  // switch tabs 
+  if (tabsl === tabNum) {
+    for (let i = 1; i <= tabsn; i++) {
+      if (i !== tabNum && document.getElementById('t' + i)) {
+        st(i);
+        break;
+      }
+    }
+  }
+
+  document.getElementById('t' + tabNum).remove();
+  document.getElementById('y' + tabNum).remove();
 }
 
   </script>
@@ -730,10 +769,18 @@ function st(nt){
     <div class="panel-right" id="right-panel">
       <div class="tabs">
         <div class="tabs-left">
-          <ul class="nav-bar" id="nav"><li class="nav-item nav-item-selected" id="t1" onclick="st(1);">Tab 1</li><li class="nav-item" onclick="nt();"><b>+</b></li></ul>
+          <ul class="nav-bar" id="nav">
+            <li class="nav-item nav-item-selected" id="t1" onclick="if(event.button!==1) st(1);"
+              onmousedown="if(event.button===1){ct(1,event);event.preventDefault();}">Tab 1 <span class="close-tab"
+                onclick="ct(1,event);">×</span></li>
+            <li class="nav-item" onclick="nt();"><b>+</b></li>
+          </ul>
         </div>
 	<div class="tabs-right">
-          <ul class="nav-bar"><li class="nav-item" id="info_time" onmouseenter="me(this);" onmouseleave="ml();">unknown</li><li class="nav-item"><b>&#9776;</b></li></ul>
+          <ul class="nav-bar">
+            <li class="nav-item" id="info_time" onmouseenter="me(this);" onmouseleave="ml();">unknown</li>
+            <li class="nav-item"><b>&#9776;</b></li>
+          </ul>
         </div>
       </div>
       <iframe src="../y/" id="y1"></iframe>

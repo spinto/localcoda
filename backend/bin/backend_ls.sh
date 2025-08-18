@@ -3,7 +3,7 @@
 
 #Basic functions
 function error(){
-  echo "ERROR: $2"
+  echo "ERROR: $2" >&2
   exit $1
 }
 function check_sw(){
@@ -22,9 +22,11 @@ function check_env(){
 check_sw jq readlink grep
 
 #Get app directory and load basic configuration
-SWDIR="`readlink -f "$0"`"; SWDIR="${SWDIR%/*}"
-APPDIR="`readlink -f "${SWDIR%/*}"`"; APPDIR="${APPDIR%/}"
-WWWDIR=`readlink -f $APPDIR/www`
+SWDIR="${BASH_SOURCE[0]}"
+[[ "${SWDIR:0:1}" == "/" ]] || SWDIR="$PWD/$SWDIR"
+cd "${SWDIR%/*}"; SWDIR="$PWD"
+APPDIR="${SWDIR%/*}"
+WWWDIR="$APPDIR/www"
 [[ -e "$APPDIR/cfg/conf" ]] || error 1 "Cannot find configuration file at $APPDIR/cfg/conf"
 source $APPDIR/cfg/conf
 
@@ -68,15 +70,6 @@ while [[ "$#" -gt 0 ]]; do
 done
 #Check required configuration is set
 check_env ORCHESTRATION_ENGINE EXECUTION_NAME_SCHEME 
-if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
-  check_sw docker
-	check_env LOCAL_IPPORT
-elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
-  check_sw kubectl
-	check_env KUBERNETES_NAMESPACE
-else
-	error 2 "Orchestration engine $ORCHESTRATION_ENGINE is invalid!"
-fi
 
 #Calculate dynamic paths
 eval INT_BASEPATH=$INT_BASEPATH_SCHEME
@@ -84,39 +77,68 @@ eval EXECUTION_NAME=$EXECUTION_NAME_SCHEME
 
 #Use the orchestration engine to run the backend instance
 if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
+  check_sw docker
 
-  {
-    echo "UUID|User|Backend instance|Ready"
-    DOCKER_EXTRA_SEL=
-    [[ -n "$INSTANCE_USERNAME" ]] && DOCKER_EXTRA_SEL="-f label=user=$INSTANCE_USERNAME"
-    docker ps -f "name=$EXECUTION_NAME" $DOCKER_EXTRA_SEL --format '{{.Names}}' | while read cn; do
-      #get info from container
-      docker exec $cn /bin/bash -c '[[ -e /etc/localcoda/ready ]]'
-      if [[ $? -ne 0 ]]; then
-        rs=
-      else
-        rs=`docker inspect $cn --format '{{ index .Config.Labels "readyurl" }}'`
-      fi
-      iid=`docker inspect $cn --format '{{ index .Config.Labels "instanceid" }}'`
-      un="\"`docker inspect $cn --format '{{ index .Config.Labels "user" }}'`\""
-      echo "$iid|$un|$cn|$rs"
-    done
-  } | column -t -s '|'
+  echo "["
+  DOCKER_EXTRA_SEL=
+  [[ -n "$INSTANCE_USERNAME" ]] && DOCKER_EXTRA_SEL="-f label=user=$INSTANCE_USERNAME"
+  s=
+  docker ps -f "name=$EXECUTION_NAME" $DOCKER_EXTRA_SEL --format '{{.Names}}' | while read cn; do
+    #get info from container
+    docker exec $cn /bin/bash -c '[[ -e /etc/localcoda/ready ]]'
+    if [[ $? -ne 0 ]]; then
+      rs="starting"
+    else
+      rs="ready"
+    fi
+    cat << EOF
+  $s{
+    "id":"`docker inspect $cn --format '{{ index .Config.Labels "instanceid" }}'`",
+    "user":"`docker inspect $cn --format '{{ index .Config.Labels "user" }}'`",
+    "status":"$rs",
+    "access_url":"`docker inspect $cn --format '{{ index .Config.Labels "readyurl" }}'`",
+    "instance_name":"$cn",
+    "tutorial_path":"`docker inspect $cn --format '{{ index .Config.Labels "tutorialpath" }}'`",
+    "start_time": "`docker inspect $cn --format '{{ index .Config.Labels "starttime" }}'`",
+    "max_time": "`docker inspect $cn --format '{{ index .Config.Labels "maxtime" }}'`"
+  }
+EOF
+    [[ -z "$s" ]] && s=,
+  done
+  echo "]"
 
 elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
-  {
-    echo "UUID|User|Backend instance|Ready"
-    KUBECTL_EXTRA_SEL=
-    [[ -n "$INSTANCE_USERNAME" ]] && KUBECTL_EXTRA_SEL=",localcoda-user=$INSTANCE_USERNAME"
-		kubectl get pod -n "$KUBERNETES_NAMESPACE" --selector=localcoda-instanceid,job-name$KUBECTL_EXTRA_SEL -o jsonpath='{range .items[*]}{.metadata.labels.job-name}{" "}{.status.conditions[?(@.type=="Ready")].status}{" "}{.metadata.annotations.readyurl}{" "}{.metadata.labels.localcoda-instanceid}{" \""}{.metadata.labels.localcoda-user}{"\"\n"}{end}' | grep ^$EXECUTION_NAME | while read cn rs ru iid un; do
-      #get info from container
-      if [[ "$rs" != "True" ]]; then
-        rs=
-      fi
-      echo "$iid|$un|$cn|$ru"
-    done
-  } | column -t -s '|'
- 
+  check_sw kubectl
+  check_env KUBERNETES_NAMESPACE
+
+  echo "["
+  s=
+  KUBECTL_EXTRA_SEL=
+  [[ -n "$INSTANCE_USERNAME" ]] && KUBECTL_EXTRA_SEL=",localcoda-user=$INSTANCE_USERNAME"
+  error 3 "todoinoneline"
+	kubectl get pod -n "$KUBERNETES_NAMESPACE" --selector=localcoda-instanceid,job-name$KUBECTL_EXTRA_SEL -o jsonpath='{range .items[*]}{.metadata.labels.job-name}{" "}{.status.conditions[?(@.type=="Ready")].status}{" "}{.metadata.annotations.readyurl}{" "}{.metadata.labels.localcoda-instanceid}{" \""}{.metadata.labels.localcoda-user}{"\" }{.metadata.labels.localcoda-tutorialpath}{\n"}{end}' | grep ^$EXECUTION_NAME | while read cn rs ru iid un pt; do
+    #get info from container
+    if [[ "$rs" != "True" ]]; then
+      rs="starting"
+    else
+      rs="ready"
+    fi
+    cat << EOF
+  $s{
+    "id":"$iid",
+    "user":$un,
+    "status":"$rs",
+    "access_url":"$ur",
+    "instance_name":"$cn",
+    "tutorial_path":"$pt"
+  }
+EOF
+    [[ -z "$s" ]] && s=,
+  done
+  echo "]"
+
+else
+  error 2 "Orchestration engine is invalid!"
 fi
 #all done correctly if we are at this point
 exit 0

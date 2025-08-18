@@ -20,6 +20,6 @@
   },
   "backend": {
     "imageid": "ubuntu",
-		"mountmode": "rw"
+    "mountextra": "/:/data/tutorials:rw"
   }
 }

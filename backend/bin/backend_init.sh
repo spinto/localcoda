@@ -18,18 +18,15 @@ function check_env(){
   done
 }
 
-#Check basic software is there
-check_sw readlink
-
 #Get app directory and load basic configuration
-SWDIR="`readlink -f "$0"`"; SWDIR="${SWDIR%/*}"
-APPDIR="`readlink -f "${SWDIR%/*}"`"; APPDIR="${APPDIR%/}"
+SWDIR="${BASH_SOURCE[0]}"
+[[ "${SWDIR:0:1}" == "/" ]] || SWDIR="$PWD/$SWDIR"
+cd "${SWDIR%/*}"; SWDIR="$PWD"
+APPDIR="${SWDIR%/*}"
 [[ -e "$APPDIR/cfg/conf" ]] || error 1 "Cannot find configuration file at $APPDIR/cfg/conf"
 source $APPDIR/cfg/conf
-TAPPDIR="`readlink -f "${APPDIR%/*}"`"; TAPPDIR="${TAPPDIR%/}/tutorials/data"
+TAPPDIR="${APPDIR%/*}"; TAPPDIR="${TAPPDIR%/}/tutorials/data"
 [[ -e "$TAPPDIR" ]] || error 1 "Cannot find tutorials dir at $TAPPDIR"
-WWWDIR=`readlink -f $APPDIR/www`
-[[ -e "$WWWDIR" ]] || error 1 "Cannot find www dir at $WWWDIR"
 
 #Load commandline options
 APP_VERSION=0.0.1
@@ -134,11 +131,6 @@ EOF
     #Check result
 		[[ $res -ne 0 ]] && error 3 "Failed to copy the files"
 
-    #Check WWW configmap
-		echo "Creating/updating WWW configmap..."
-		kubectl delete -n "$KUBERNETES_NAMESPACE" configmap/$KUBERNETES_BACKEND_WWW_CONFIGMAP 
-    kubectl create -n "$KUBERNETES_NAMESPACE" configmap $KUBERNETES_BACKEND_WWW_CONFIGMAP --from-file="$WWWDIR"
-		[[ $res -ne 0 ]] && error 3 "Failed to create configmap"
   else
     error 2 "Orchestration engine $ORCHESTRATION_ENGINE is invalid!"
   fi

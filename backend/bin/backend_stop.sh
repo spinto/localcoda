@@ -3,7 +3,7 @@
 
 #Basic functions
 function error(){
-  echo "ERROR: $2"
+  echo "ERROR: $2" >&2
   exit $1
 }
 function check_sw(){
@@ -19,12 +19,13 @@ function check_env(){
 }
 
 #Check basic software is there
-check_sw jq readlink grep
+check_sw jq grep
 
 #Get app directory and load basic configuration
-SWDIR="`readlink -f "$0"`"; SWDIR="${SWDIR%/*}"
-APPDIR="`readlink -f "${SWDIR%/*}"`"; APPDIR="${APPDIR%/}"
-WWWDIR=`readlink -f $APPDIR/www`
+SWDIR="${BASH_SOURCE[0]}"
+[[ "${SWDIR:0:1}" == "/" ]] || SWDIR="$PWD/$SWDIR"
+cd "${SWDIR%/*}"; SWDIR="$PWD"
+APPDIR="${SWDIR%/*}"
 [[ -e "$APPDIR/cfg/conf" ]] || error 1 "Cannot find configuration file at $APPDIR/cfg/conf"
 source $APPDIR/cfg/conf
 
@@ -72,7 +73,6 @@ done
 check_env ORCHESTRATION_ENGINE EXECUTION_NAME_SCHEME
 if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
   check_sw docker
-	check_env LOCAL_IPPORT
 elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
   check_sw kubectl
 	check_env KUBERNETES_NAMESPACE
@@ -87,6 +87,9 @@ eval EXECUTION_NAME=$EXECUTION_NAME_SCHEME
 if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
   #Check if container is owned by the user otherwise throw error
   [[ -n "$INSTANCE_USERNAME" && "`docker inspect --format='{{ index .Config.Labels "user" }}' $EXECUTION_NAME`" != "$INSTANCE_USERNAME" ]] && error 33 "Container does not exist for this user!"
+  #Try to exist gracefully (kubernetes will do so automatically upon delete, but on docker engine we need to do it manually)
+  docker exec $EXECUTION_NAME /usr/sbin/poweroff
+  #Force stop
   docker stop $EXECUTION_NAME
   exit $?
 

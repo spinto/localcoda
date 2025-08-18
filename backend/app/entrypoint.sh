@@ -13,14 +13,16 @@ done
 [[ -z "$LOCALCODA_OPTIONS" ]] && error 3 "LOCALCODA_OPTIONS environment variable not found"
 LOCALCODA_OPTIONS=( ${LOCALCODA_OPTIONS//,/ } )
 INDEX_FILE="${LOCALCODA_OPTIONS[0]#/}"
-INT_BASEPATH="${LOCALCODA_OPTIONS[1]}"
-EXT_MAINHOST="${LOCALCODA_OPTIONS[2]}"
-EXT_PROXYHOST="${LOCALCODA_OPTIONS[3]}"
-MAXTIME="${LOCALCODA_OPTIONS[4]}"
-CLOSE_ON_EXIT="${LOCALCODA_OPTIONS[5]}"
+EXT_PROTO="${LOCALCODA_OPTIONS[1]}"
+EXT_EXITHOST="${LOCALCODA_OPTIONS[2]}"
+EXT_MAINHOST="${LOCALCODA_OPTIONS[3]}"
+EXT_PROXYHOST="${LOCALCODA_OPTIONS[4]}"
+MAXTIME="${LOCALCODA_OPTIONS[5]}"
+CLOSE_ON_EXIT="${LOCALCODA_OPTIONS[6]}"
 [[ -z "$INDEX_FILE" ]] && error 3 "INDEX_FILE option empty" #tutorial to run: e.g. mlops/index.json
-[[ -z "$INT_BASEPATH" ]] && error 3 "INT_BASEPATH option empty" #base path to respond: e.g. /scenario/run/UUID/
-[[ -z "$EXT_MAINHOST" ]] && error 3 "EXT_MAINHOST option empty" #external host address: e.g. app.localcoda.com
+[[ -z "$EXT_EXITHOST" ]] && error 3 "EXT_EXITHOST option empty" #frontend host scheme: e.g. app.localcoda.com
+[[ -z "$EXT_PROTO" ]] && error 3 "EXT_PROTO option empty" #external host scheme (for both main host and proxy host): e.g. http
+[[ -z "$EXT_MAINHOST" ]] && error 3 "EXT_MAINHOST option empty" #backend host address: e.g. app-UUID.localcoda.com
 [[ -z "$EXT_PROXYHOST" ]] && error 3 "EXT_PROXYHOST option empty" #external proxy host address: e.g. app-PORT.localcoda.com
 [[ -z "$MAXTIME" ]] && MAXTIME=3600
 [[ -z "$CLOSE_ON_EXIT" ]] && CLOSE_ON_EXIT=true
@@ -49,7 +51,7 @@ fi
 cat <<EOF > /etc/localcoda/www_options.json
 { 
   "index_file": "$INDEX_FILE",
-  "ext_proxyhost":"http://$EXT_PROXYHOST",
+  "ext_proxyhost":"$EXT_PROTO://$EXT_PROXYHOST",
   "start_time": `date -u +%s`,
   "max_time": $MAXTIME
 }
@@ -57,8 +59,8 @@ EOF
 
 #Write localcoda host file (and killercoda one also, for cross-compatibility)
 mkdir -p /etc/killercoda
-echo "http://$EXT_PROXYHOST" > /etc/killercoda/host
-echo "http://$EXT_PROXYHOST" > /etc/localcoda/host
+echo "$EXT_PROTO://$EXT_PROXYHOST" > /etc/killercoda/host
+echo "$EXT_PROTO://$EXT_PROXYHOST" > /etc/localcoda/host
 
 #Logs folder
 mkdir -p /var/log/localcoda/
@@ -81,6 +83,8 @@ http {
   sendfile on;
   tcp_nopush on;
   types_hash_max_size 2048;
+  server_names_hash_bucket_size 128;
+
   include /etc/nginx/mime.types;
   default_type application/octet-stream;
   access_log /var/log/localcoda/nginx_access.log;
@@ -98,29 +102,32 @@ http {
   }
   server {
     listen $EXT_LISTENPORT;
-    server_name ${EXT_MAINHOST%:*};
-    location $INT_BASEPATH/y/ {
+    server_name "${EXT_MAINHOST%:*}";
+    location /y/ {
       proxy_pass http://unix:/etc/localcoda/ttyd.sock;
       proxy_http_version 1.1;
       proxy_set_header Upgrade \$http_upgrade;
       proxy_set_header Connection \$connection_upgrade;
     }
-    location $INT_BASEPATH/w/ {
+    location /w/ {
       alias $WWW_DIR/;
       autoindex off;
     }
-    location = $INT_BASEPATH/options.json {
+    location = /options.json {
       alias /etc/localcoda/www_options.json;
     }
-    location $INT_BASEPATH/t {
+    location /t {
       alias $TUTORIAL_DIR/;
       autoindex off;
     }
     location / {
-      return 302 \$scheme://$EXT_MAINHOST$INT_BASEPATH/w/;
+      return 302 $EXT_PROTO://$EXT_MAINHOST/w/;
     }
     location = /favicon.ico {
-      return 302 \$scheme://$EXT_MAINHOST$INT_BASEPATH/w/favicon.ico;
+      alias /etc/localcoda/www/favicon.ico;
+    }
+    location = /exit {
+      return 302 $EXT_PROTO://$EXT_EXITHOST;
     }
   }
   server {
@@ -202,13 +209,13 @@ fi
 if [[ "$CLOSE_ON_EXIT" == "true" ]]; then
   #Wait for ttyd to terminate (which will do when all clients are disconnected), then poweroff
 	cd /root
-  ttyd -i /etc/localcoda/ttyd.sock -q -W -b $INT_BASEPATH/y /bin/bash $FOREGROUND_SCRIPT &>/var/log/localcoda/webshell0.log
+  ttyd -i /etc/localcoda/ttyd.sock -q -W -b /y /bin/bash $FOREGROUND_SCRIPT &>/var/log/localcoda/webshell0.log
   echo "no more ttyd connections. shutting down..."
   poweroff
 else
   #Start in background then exit. Also, ttyd it should not terminate when all clients are disconnected.
   cd /root 
-  nohup ttyd -i /etc/localcoda/ttyd.sock -W -b $INT_BASEPATH/y /bin/bash $FOREGROUND_SCRIPT &>/var/log/localcoda/webshell0.log &
+  nohup ttyd -i /etc/localcoda/ttyd.sock -W -b /y /bin/bash $FOREGROUND_SCRIPT &>/var/log/localcoda/webshell0.log &
 fi
 
 #Exit correctly (and write the ready file)

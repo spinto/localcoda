@@ -1,0 +1,1 @@
+../../../../backend/bin/backend_stop.sh

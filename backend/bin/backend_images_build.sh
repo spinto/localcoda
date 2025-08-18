@@ -10,16 +10,18 @@ function error(){
 which readlink &>/dev/null
 [[ $? -ne 0 ]] && error 2 "readlink command not found in the PATH. This is required."
 
-SWDIR="`readlink -f "$0"`"; SWDIR="${SWDIR%/*}"
-APPDIR="`readlink -f "${SWDIR%/*}"`"; APPDIR="${APPDIR%/}"
+SWDIR="${BASH_SOURCE[0]}"
+[[ "${SWDIR:0:1}" == "/" ]] || SWDIR="$PWD/$SWDIR"
+cd "${SWDIR%/*}"; SWDIR="$PWD"
+APPDIR="${SWDIR%/*}"
 
 #Parse command line parameters
 APP_VERSION=0.0.1
 function usage {
   cat <<:usage
-localcoda build images utility version $APP_VERSION
+localcoda backend build images utility version $APP_VERSION
 Usage:
-  backend_run [options]
+  backend_images_build [options]
 
 Options:
   -h             displays this help page
@@ -68,7 +70,7 @@ fi
 [[ -d "$IMAGES_DIR" ]] || error 4 "Cannot find image dir at $IMAGES_DIR. Make sure you correctly installed the application"
 
 #Check required build software is there
-for sw in docker; do
+for sw in $REQUIRED_SW; do
   which $sw &>/dev/null
   [[ $? -ne 0 ]] && error 2 "$sw not found in the PATH. This is required."
 done

@@ -83,13 +83,19 @@ An advanced list of configuration options is included in the file
 backend/cfg/conf
 ```
 
+
+
+#### Image memory limits
+
+Localcoda can enforce memory limits for the executions of scenarios. By default, these are disabled (as having very high limits was the all point of developing this software in the first place), but you can enforce them for each base image by editing the `cfg/imagemap.*` configuration file for your specific virtualization engine.
+
 #### Use custom images
 
 This software comes with two basic images, one implmenting a single node kubernetes cluster (stable version) and one implementing a ubuntu (with docker) machine. You can anyway setup new images.
 
 To do so, you can have a look at the images folder in this repository. A new image can be created as a new directory. The entrypoint (and service, if you are using systemd) need to be configured in your image. You can have a look at the existing images configuration and extend their dockerfiles.
 
-The images can be built via the `backend/bin/images_build.sh` script. 
+The images can be built via the `backend/bin/backend_images_build.sh` script. 
 
 ### Single-scenario run, on a remote kubernetes cluster
 

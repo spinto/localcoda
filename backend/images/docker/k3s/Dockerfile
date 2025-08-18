@@ -25,9 +25,7 @@ RUN  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | 
 #RUN mkdir -p /var/lib/rancher/k3s/agent/images/ && curl -L -o /var/lib/rancher/k3s/agent/images/k3s-airgap-images-amd64.tar.zst "https://github.com/k3s-io/k3s/releases/download/`k3s --version | sed -n 's|^k3s version \([^ ]*\).*$|\1|p'`/k3s-airgap-images-amd64.tar.zst"
 COPY k3s-airgap-images-amd64-filtered.tar.zst /var/lib/rancher/k3s/agent/images/k3s-airgap-images-amd64.tar.zst
 
-#Local-coda specific application installation
-RUN apt update && apt-get upgrade -y && DEBIAN_FRONTEND=noninteractive apt-get install -y nginx bash jq && apt clean all && rm -rf /var/lib/apt/lists/* && systemctl disable nginx && curl -L https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.i686 > /usr/bin/ttyd && chmod +x /usr/bin/ttyd
-COPY entrypoint.sh prepare_image.sh entrypoint-blocking /etc/localcoda/
-COPY poweroff /usr/sbin/poweroff
-
+#Local-coda specific application installation (blocking entrypoint version)
+RUN apt update && apt-get upgrade -y && DEBIAN_FRONTEND=noninteractive apt-get install -y nginx bash jq && apt clean all && rm -rf /var/lib/apt/lists/* && systemctl disable nginx && curl -L https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 > /usr/bin/ttyd && chmod +x /usr/bin/ttyd && ln -s /etc/localcoda/entrypoint-poweroff /usr/sbin/poweroff
+COPY localcoda-app /etc/localcoda
 ENTRYPOINT ["/bin/bash","/etc/localcoda/entrypoint-blocking"]

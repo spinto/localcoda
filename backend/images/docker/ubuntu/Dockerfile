@@ -21,9 +21,7 @@ VOLUME /var/lib/rancher/k3s
 VOLUME /var/lib/cni
 VOLUME /var/log
 
-#Local-coda specific application installation
-RUN apt update && apt-get upgrade -y && DEBIAN_FRONTEND=noninteractive apt-get install -y nginx bash jq && apt clean all && rm -rf /var/lib/apt/lists/* && systemctl disable nginx && curl -L https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.i686 > /usr/bin/ttyd && chmod +x /usr/bin/ttyd
-COPY entrypoint.sh prepare_image.sh entrypoint-blocking /etc/localcoda/
-COPY poweroff /usr/sbin/poweroff
-
+#Local-coda specific application installation (blocking entrypoint version)
+RUN apt update && apt-get upgrade -y && DEBIAN_FRONTEND=noninteractive apt-get install -y nginx bash jq && apt clean all && rm -rf /var/lib/apt/lists/* && systemctl disable nginx && curl -L https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 > /usr/bin/ttyd && chmod +x /usr/bin/ttyd && ln -s /etc/localcoda/entrypoint-poweroff /usr/sbin/poweroff
+COPY localcoda-app /etc/localcoda
 ENTRYPOINT ["/bin/bash","/etc/localcoda/entrypoint-blocking"]

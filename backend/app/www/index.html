@@ -470,6 +470,7 @@
         if (!response.ok) throw new Error('Network response was not ok');
         options = await response.json();         // Parse JSON data
         options['ext_proxyhost']=options['ext_proxyhost'].replace('PORT','$1')
+        document.getElementById('exitbtn').href=options['exit_host']
       } catch (error) {
         document.getElementById('t').textContent = 'Failed to load options: ' + error.message;
         return;
@@ -719,7 +720,7 @@ function st(nt){
 
   <!-- Header -->
   <div class="header">
-    <a href="/exit">localcoda</a>
+    <a href="#" id="exitbtn">localcoda</a>
   </div>
   <!-- Toaster -->
   <span id="toaster"></span>

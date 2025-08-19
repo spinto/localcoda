@@ -52,6 +52,7 @@ cat <<EOF > /etc/localcoda/www_options.json
 { 
   "index_file": "$INDEX_FILE",
   "ext_proxyhost":"$EXT_PROTO://$EXT_PROXYHOST",
+  "exit_host":"$EXT_PROTO://$EXT_EXITHOST",
   "start_time": `date -u +%s`,
   "max_time": $MAXTIME
 }
@@ -125,9 +126,6 @@ http {
     }
     location = /favicon.ico {
       alias /etc/localcoda/www/favicon.ico;
-    }
-    location = /exit {
-      return 302 $EXT_PROTO://$EXT_EXITHOST;
     }
   }
   server {
@@ -206,18 +204,20 @@ else
   FOREGROUND_SCRIPT=""
 fi
 
+cd /root
+ttyd -i /etc/localcoda/ttyd.sock -q -W -b /y /bin/bash $FOREGROUND_SCRIPT </dev/null &>/var/log/localcoda/webshell0.log &
+[[ $? -ne 0 ]] && error 22 "Failed to run ttyd!"
+ttydpid=$!
+
+#The webshell is now ready to accept connection
+touch /etc/localcoda/ready
+
 if [[ "$CLOSE_ON_EXIT" == "true" ]]; then
   #Wait for ttyd to terminate (which will do when all clients are disconnected), then poweroff
-	cd /root
-  ttyd -i /etc/localcoda/ttyd.sock -q -W -b /y /bin/bash $FOREGROUND_SCRIPT &>/var/log/localcoda/webshell0.log
+  wait $ttydpid
   echo "no more ttyd connections. shutting down..."
   poweroff
-else
-  #Start in background then exit. Also, ttyd it should not terminate when all clients are disconnected.
-  cd /root 
-  nohup ttyd -i /etc/localcoda/ttyd.sock -W -b /y /bin/bash $FOREGROUND_SCRIPT &>/var/log/localcoda/webshell0.log &
 fi
 
-#Exit correctly (and write the ready file)
-touch /etc/localcoda/ready
+#Exit correctly
 exit 0

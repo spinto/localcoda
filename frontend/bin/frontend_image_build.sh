@@ -51,7 +51,7 @@ done
 #Engine-specific setup
 DOCKER_CMD_EXTRA=
 REQUIRED_SW=docker
-IMAGES_DIR="$APPDIR/img"
+IMAGES_DIR="$APPDIR/app"
 
 #Check required build software is there
 for sw in docker; do

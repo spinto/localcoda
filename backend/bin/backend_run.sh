@@ -22,7 +22,7 @@ function check_env(){
 }
 
 #Check basic software is there
-check_sw jq grep date
+check_sw jq grep date wc
 
 #Get app directory and load basic configuration
 SWDIR="${BASH_SOURCE[0]}"
@@ -56,7 +56,6 @@ Options:
   -U <username>  assign the running instance to a given <username>. Useful if you are managing
                  multi-tenant executions
   -q | -v        decrease (-q) or increase (-v) log level
-  -W             enable writing in the tutorials folder. This is only for administrators!
   -d | --nowait  do not wait for the backend to be ready before closing the app. The script
                  will release once the backend is started, and you can check its status via
                  the backend_ls command
@@ -67,7 +66,6 @@ Options:
 TUTORIAL_DIR=
 INDEX_FILE=
 LOCAL_UUID=
-TUTORIALS_WRITE=false
 WAIT_FOR_START=true
 INSTANCE_USERNAME=
 LOGLEVEL=1
@@ -77,7 +75,6 @@ while [[ "$#" -gt 0 ]]; do
    -o) eval "$2"; shift 2 ;;
    -u) LOCAL_UUID="$2"; shift 2 ;;
    -U) INSTANCE_USERNAME="$2"; shift 2 ;;
-   -W) TUTORIALS_WRITE=true; shift 1;;    
    -d | --nowait) WAIT_FOR_START=false; shift 1 ;;
    -v) LOGLEVEL=$(( LOGLEVEL + 1 )); shift 1;;
    -q) LOGLEVEL=$(( LOGLEVEL - 1 )); shift 1;;
@@ -202,7 +199,7 @@ EOF
 fi
 BACKEND_IMAGE="${BACKEND_INFO[0]}"
 BACKEND_T_MODE="${BACKEND_INFO[1]}"
-[[ "$BACKEND_T_MODE" == "rw" ]] && ( $TUTORIALS_WRITE || error 33 "You need to run this tutorial as an administrator, with write mode enabled!" ) || BACKEND_T_MODE=ro
+[[ "$BACKEND_T_MODE" == "rw" ]] || BACKEND_T_MODE=ro
 
 #Look if the image to run is into your mapfile
 IMAGE_INFO="`grep "^$BACKEND_IMAGE " $IMAGES_MAPFILE`"
@@ -249,8 +246,8 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
     DOCKER_RUN_ARGS="$DOCKER_RUN_ARGS -l user=$INSTANCE_USERNAME"
     #Check maximum parallel executions (if reached)
     if [[ -n "$MAXIMUM_RUN_PER_USER" && "$MAXIMUM_RUN_PER_USER" -gt 0 ]]; then
-      running_instances="`docker ps -q -f "label=user=$INSTANCE_USERNAME"`"
-      [[ "$running_instances" -ge "$MAXIMUM_RUN_PER_USER" ]] && error 43 "Maximum runs per user reached"
+      running_instances="`docker ps -q -f "label=user=$INSTANCE_USERNAME" | wc -l`"
+      [[ "$running_instances" -ge "$MAXIMUM_RUN_PER_USER" ]] && error 42 "Maximum runs per user reached"
     fi
   fi
 
@@ -289,7 +286,7 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
 
   #Start sidecar to terminate container after given startup time.
   if [[ "$TUTORIAL_MAX_TIME" != "-1" ]]; then
-    (sleep $TUTORIAL_MAX_TIME; docker stop "$EXECUTION_NAME" &>/dev/null) &
+    nohup bash -c "read -rt \"$TUTORIAL_MAX_TIME\" <> <(:) || :;docker exec \"$EXECUTION_NAME\" /usr/sbin/poweroff; docker stop \"$EXECUTION_NAME\"" </dev/null &>/dev/null &
   fi
 
   #Wait for the backend to be ready
@@ -323,7 +320,7 @@ elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
   #Check maximum parallel executions (if reached)
   if [[ -n "$INSTANCE_USERNAME" && -n "$MAXIMUM_RUN_PER_USER" && "$MAXIMUM_RUN_PER_USER" -gt 0 ]]; then
     running_instances="`kubectl get pod -n $KUBERNETES_NAMESPACE --selector "localcoda-user=$INSTANCE_USERNAME" -o name | wc -l`"
-    [[ "$running_instances" -ge "$MAXIMUM_RUN_PER_USER" ]] && error 43 "Maximum runs per user reached"
+    [[ "$running_instances" -ge "$MAXIMUM_RUN_PER_USER" ]] && error 42 "Maximum runs per user reached"
   fi
 
   {

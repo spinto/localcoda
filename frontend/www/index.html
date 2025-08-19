@@ -172,15 +172,7 @@
       object-fit: contain;
     }
 
-    .tile-black {
-      background: #000;
-      color: #fff;
-    }
-
-    .tile-grey {
-      background: #f5f5f5;
-      color: #555555;
-    }
+    .tile-red-light{background:#ff9999;color:#660000}.tile-red{background:#ff4d4d;color:#fff}.tile-red-dark{background:#b30000;color:#fff}.tile-blue-light{background:#99ccff;color:#003366}.tile-blue{background:#4da6ff;color:#fff}.tile-blue-dark{background:#003366;color:#fff}.tile-green-light{background:#99ffbb;color:#003300}.tile-green{background:#4dff88;color:#003300}.tile-green-dark{background:#006633;color:#fff}.tile-yellow-light{background:#fff9c4;color:#333}.tile-yellow{background:#ffeb3b;color:#333}.tile-yellow-dark{background:#fbc02d;color:#000}.tile-orange-light{background:#ffcc99;color:#662200}.tile-orange{background:#ff9933;color:#fff}.tile-orange-dark{background:#cc5200;color:#fff}.tile-purple-light{background:#e0b3ff;color:#330066}.tile-purple{background:#b366ff;color:#fff}.tile-purple-dark{background:#4b0082;color:#fff}.tile-pink-light{background:#ffcce6;color:#660033}.tile-pink{background:#ff80bf;color:#330019}.tile-pink-dark{background:#cc0066;color:#fff}.tile-grey-light{background:#e0e0e0;color:#333}.tile-grey{background:#9e9e9e;color:#fff}.tile-grey-dark{background:#424242;color:#fff}.tile-navy-light{background:#809fff;color:#000033}.tile-navy{background:#001f4d;color:#fff}.tile-navy-dark{background:#000033;color:#fff}.tile-brown-light{background:#d2a679;color:#331a00}.tile-brown{background:#8b5e3c;color:#f5f5dc}.tile-brown-dark{background:#4d2600;color:#fff}.tile-black-light{background:#666;color:#fff}.tile-black{background:#000;color:#fff}.tile-black-dark{background:#000;color:#fff}.tile-white-light{background:#fff;color:#333}.tile-white{background:#f5f5f5;color:#333}.tile-white-dark{background:#ccc;color:#000}
 
     .tile p {
       font-size: 0.9em;
@@ -212,24 +204,58 @@
   </style>
   <script>
     async function startup() {
-      //Check if you are logged in
-      await loginCheck();
+      //Check if you are logged in or not, and set user button
+      const user_info = await ctlFetch('me');
+      //If null, we are not logged in
+      if(!user_info) {
+        return;
+      }
+      //If no
+      if(user_info['username']!="") {
+        //Show logged user button
+        ul = document.getElementById('userbtn');
+        ul.textContent=user_info['username'];
+        ul.style.visibility='';
+      }
       //Trigger the loading of the page (as the hash change will not fire itself)
       loadpage();
     }
     function dError(errorText) {
       document.getElementById('t').textContent = 'ERROR:'+errorText;
     }
-    async function loginCheck(cl) {
-      //Check if you are logged in or not
+    function loginPage(){
+      document.getElementById('p').textContent = 'Forbidden';
+      document.getElementById('t').innerHTML = 'Login is required for access. To login, click <a href="oauth2/sign_in">Login</a>.';
+      return
+    }
+    async function ctlFetch(cl) {
+      //Fetch JSON response
       try {
-        const response = await fetch('ctl/me');  // Load JSON file
-        if (!response.ok) throw new Error('Network response was not ok');
-        me = await response.json();         // Parse JSON data
+        const response = await fetch('ctl/'+cl);
+        if (response.status==400) {
+          throw new Error('Bad request. Something is wrong');
+        }else if (response.status==401) {
+          //You have no authentication, so you should go to the login page
+          return loginPage()
+        }else if (response.status==403) {
+          //You are authenticated, but you are not authorized
+          throw new Error('You have no authorization. Contact an administrator.');
+        }else if (response.status==404) {
+          throw new Error('Not Found. Something is wrong');
+        }else if (response.status==429) {
+          throw new Error('Too many request. You may be limited in the number of scnearios or other requests you can start.');
+        }else if (response.status==500) {
+          throw new Error('Internal error. Something is wrong! Please contact an administrator.');          
+        }else if (!response.ok) {
+          //generice error
+          throw new Error('Network response was not ok. Something is really wrong! Please contact an administrator immediately.');
+        }
+        structure = await response.json();         // Parse JSON data
       } catch (error) {
         dError(error.message);
         return;
       }
+      return structure;
     }
     async function loadpage() {
       //Clean page contents
@@ -250,9 +276,32 @@
         runScenario(cl);
       } else if (cl.startsWith('stop')){
         stopScenario(cl);
+      } else if (cl.startsWith('user')){
+        userPage();
       } else {
         dError("ERROR: Wrong hash!")
       }
+    }
+    async function userPage(){
+      //Check if you are logged in or not, and set user button
+      const user_info = await ctlFetch('me');
+      //If null, we are not logged in
+      if(!user_info) {
+        return;
+      }
+      //If logged in
+      document.getElementById('p').textContent="You are logged in as "+user_info['username'];
+      pagetext="<br/>You are a member of the following groups:<br/><ul>";
+      for (g in user_info['groups']) {
+        pagetext=pagetext+"<li>"+user_info['groups'][g]+"</li>";
+      }
+      pagetext=pagetext+"</ul><br/>You have the following special rights configured:<ul>";
+      for (g in user_info['overrides']) {
+        pagetext=pagetext+"<li>"+g+"="+user_info['overrides'][g]+"</li>";
+      }
+      pagetext=pagetext+"</ul><br/>If you want to Logout click <a href='oauth2/sign_out'>Logout</a>";
+
+      document.getElementById('t').innerHTML=pagetext;
     }
     async function loadPageBrowse(cl) {
       if (!cl.startsWith('browse')){
@@ -260,14 +309,8 @@
         return;
       }
       document.getElementById('t').innerHTML="loading directory... please wait...";
-      try {
-        const response = await fetch('ctl/'+cl);  // Load JSON file
-        if (!response.ok) throw new Error('Network response was not ok');
-        structure = await response.json();         // Parse JSON data
-      } catch (error) {
-        dError(error.message);
-        return;
-      }
+      const structure = await ctlFetch(cl);
+      if(structure == null) return;
       let items=structure["items"];
       let gridHTML="";
       for (var ii in items) {
@@ -280,7 +323,11 @@
         if ('theme' in i) {
           gridTheme=i['theme']
         } else {
-          gridTheme='grey';
+          if (i['type']=='scenario') {
+            gridTheme='grey';
+          } else {
+            gridTheme='grey-dark';
+          }
         }
         if ('img' in i) {
           gridImg='<img src="'+i['img']+'"/>';
@@ -313,14 +360,8 @@
       document.getElementById('p').innerHTML="Running scenario instances";
       document.getElementById('t').innerHTML="listing instances... please wait...";
 
-      try {
-        const response = await fetch('ctl/ls');  // Load JSON file
-        if (!response.ok) throw new Error('Network response was not ok');
-        data = await response.json();         // Parse JSON data
-      } catch (error) {
-        dError(error.message);
-        return;
-      }
+      const data = await ctlFetch('ls');
+      if(data == null) return;
 
       if (data.length==0){
         document.getElementById('t').innerHTML="No scenario started. Start one from the <a style=\"color: blue\" href=\"#browse\">Areas</a> page";
@@ -388,9 +429,9 @@
 
         // Time remaning/elapsed
         if(item['max_time']==-1){
-          remaining_seconds=Math.floor(new Date().getTime() / 1000)-item['start_time'];
+          remaining_seconds=Math.floor(new Date().getTime() / 1000)-parseInt(item['start_time']);
         }else{
-          remaining_seconds=item['start_time'] + item['max_time'] - Math.floor(new Date().getTime() / 1000);
+          remaining_seconds=parseInt(item['start_time']) + parseInt(item['max_time']) - Math.floor(new Date().getTime() / 1000);
         }
         hours = Math.floor(remaining_seconds / 3600);
         minutes = Math.floor((remaining_seconds - (hours * 3600)) / 60);
@@ -444,32 +485,22 @@
       }
       document.getElementById('p').innerHTML="Starting scenario...";
       document.getElementById('t').innerHTML="Please wait for scenario to start to be redirected...";
+      
       //Run the scenario
-      try {
-        const response = await fetch('ctl/'+cl);  // Load JSON file
-        if (!response.ok) throw new Error('Network response was not ok');
-        instance = await response.json();         // Parse JSON data
-      } catch (error) {
-        dError(error.message);
-        return;
-      }
+      const instance = await ctlFetch(cl);
+      if(instance == null) return;
+      
       //If we got the UUID, all is ok
       if (!instance.uuid) {
         dError("Failed to run scenario");
         return
       }
-      //Wait till the scenario is ready, till a timeout is reached
+      //Wait till the scenario is ready or till a timeout is reached
       for (let run_timeout=120; run_timeout>0; run_timeout=run_timeout-1) {
-        try {
-          const response = await fetch('ctl/ls/'+instance.uuid);  // Load JSON file
-          if (!response.ok) throw new Error('Network response was not ok');
-          run = await response.json();         // Parse JSON data
-          if (run[0]['status']=='ready') break;
-        } catch (error) {
-          dError(error.message);
-          return;
-        }
-        
+        run = await ctlFetch('ls/'+instance.uuid);
+        if(run == null) return;
+        if (run[0]['status']=='ready') break;
+
         //Sleep for one second
         await new Promise(r => setTimeout(r, 1000));
       }
@@ -488,14 +519,8 @@
       document.getElementById('p').innerHTML="Stopping scenario...";
       document.getElementById('t').innerHTML="Please wait to be redirected...";
       //Stopping scenario
-      try {
-        const response = await fetch('ctl/'+cl);  // Load JSON file
-        if (!response.ok) throw new Error('Network response was not ok');
-        structure = await response.json();         // Parse JSON data
-      } catch (error) {
-        document.getElementById('t').textContent = 'Failed to load options: ' + error.message;
-        return;
-      }
+      const run = await ctlFetch(cl);
+      if(run == null) return;
       //Got back to list
       window.location.hash='list';
     }
@@ -509,17 +534,14 @@
     <div class="header-right">
       <a href="#browse">Areas</a>
       <a href="#list">Scenarios</a>
-      <button id="userlogin" class="login-btn" href="oidc/auth">Login</button>
+      <button id="userbtn" class="login-btn" style="visibility: hidden;" onclick="window.location.hash='user'"></button>
     </div>
   </div>
-
-  <!-- Waiting -->
-  <span id="waiting"></span>
 
   <!-- Main Content -->
   <div class="main">
     <h2 id="p"></h2>
-    <p id="t"></p>
+    <p id="t">Loading application... please wait...</p>
     <div id="g">
     </div>
   </div>

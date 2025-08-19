@@ -26,7 +26,7 @@ SWDIR="${BASH_SOURCE[0]}"
 [[ "${SWDIR:0:1}" == "/" ]] || SWDIR="$PWD/$SWDIR"
 cd "${SWDIR%/*}"; SWDIR="$PWD"
 APPDIR="${SWDIR%/*}"
-[[ -e "$APPDIR/../backend/cfg/conf" ]] || error 1 "Cannot find configuration file at $APPDIR/img/backend/cfg/conf"
+[[ -e "$APPDIR/../backend/cfg/conf" ]] || error 1 "Cannot find configuration file at $APPDIR/../backend/cfg/conf"
 source $APPDIR/../backend/cfg/conf
 
 #Load commandline options
@@ -41,14 +41,18 @@ Options:
   -h             displays this help page
   -n <name>      Container/deployment name. Default is '$FRONTEND_NAME'
   -i <img>:<tag> Container image to run, including tag. Default is '$IMAGE_TORUN'. Use this to run a specific version of the frontend.
-  -Lt <dir>      use a local tutorial directory (only for local testing and using a local
-                 orchestrator)
-  -Lp <ipport>   use <ipport> as loca orchestration engine ip/port for frontend. Default is $LOCAL_EXT_IPPORT.  NOTE: If you want to provide authentication, https, and redirect support you will need to install an external proxy in front of this application.
-  -Ldev          enable development mode. This will directly mount in read/write the frontend directories from this repository instead of the ones in the image. Only for development and only for local orchestrator.
   -Kdn <n>       Deployment replicas (for Kubernetes deployment). Default is $KUBERNETES_FRONTEND_REPLICAS.
                  Increase this to serve more users.
+  --auth <c>     Enable authentication and authorization using the internal oauth2-proxy installation. <c> points to the
+                 oauth2-proxy provider configuration TOML file.
   -o <key>=<val> override the configuration option (in the $APPDIR/cfg/conf file). See
                  the content of the $APPDIR/cfg/conf file for specific options to override
+  -Lp <ipport>   use <ipport> as loca orchestration engine ip/port for frontend. Default is $LOCAL_EXT_IPPORT.
+                 NOTE: If you want to provide authentication, https, and redirect support you will need to install
+                 an external proxy in front of this application.
+  -Lt <dir>      use a local tutorial directory (only for local testing and using a local orchestrator)
+  -Ldev          enable development mode. This will directly mount in read/write the frontend directories from
+                 this repository instead of the ones in the image. Only for development and only for local orchestrator.
 :usage
   exit 1
 }
@@ -59,15 +63,17 @@ KUBERNETES_FRONTEND_REPLICAS=1
 IMAGE_TORUN=spinto/localcoda-frontend:latest
 LOCAL_EXT_IPPORT=0.0.0.0:80
 LOCAL_DEV_MODE=false
+OAUTH2_PROXY_CONF=
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
    -o) eval "$2"; shift 2 ;;
-   -n) FRONTEND_NAME="$1"; shift 2 ;;
-   -i) IMAGE_TORUN="$1"; shift 2 ;;
-   -Lt) TUTORIAL_DIR="${1%/}"; shift 2 ;;
-   -Lp) LOCAL_EXT_IPPORT="${1%/}"; shift 2 ;;
+   -n) FRONTEND_NAME="$2"; shift 2 ;;
+   -i) IMAGE_TORUN="$2"; shift 2 ;;
+   -Lt) TUTORIAL_DIR="${2%/}"; shift 2 ;;
+   -Lp) LOCAL_EXT_IPPORT="${2%/}"; shift 2 ;;
    -Ldev) LOCAL_DEV_MODE=true; shift 1 ;;
-   -Kdn) KUBERNETES_FRONTEND_REPLICAS="$1"; shift 2 ;;
+   -Kdn) KUBERNETES_FRONTEND_REPLICAS="$2"; shift 2 ;;
+   --auth) OAUTH2_PROXY_CONF="`readlink -f $2`"; shift 2 ;;
    -h | --help) usage ;;
    *) error 1 "Unrecognized argument $1. See help!"
     ;;
@@ -96,10 +102,16 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
     DOCKER_ARGS="--mount type=volume,src=$TUTORIALS_VOLUME,dst=$TUTORIALS_VOLUME_ACCESS_MOUNT,volume-nocopy"
   fi
 
+  #Enable auth2 proxy authentication
+  if [[ -n "$OAUTH2_PROXY_CONF" ]]; then
+    [[ -f "$OAUTH2_PROXY_CONF" ]] || error 33 "Oauth proxy configuration does not exists"
+    DOCKER_ARGS="$DOCKER_ARGS -v $OAUTH2_PROXY_CONF:/opt/localcoda/oauth2-proxy.cfg.base:ro"
+  fi
+
   #Start the container in the background (we need to start this as root to access the docker daemon on the VM)
   echo "Starting frontend..."
   if $LOCAL_DEV_MODE; then
-    docker run -u 0 -v /var/run/docker.sock:/var/run/docker.sock --name "$FRONTEND_NAME" $DOCKER_ARGS --network=host -e "LOCAL_EXT_IPPORT=$LOCAL_EXT_IPPORT" -v $APPDIR/img:/opt/img:ro -v $APPDIR/www:/opt/www:ro -v $APPDIR/../backend:/backend:ro --rm -it --entrypoint /bin/bash "$IMAGE_TORUN" -c 'cd /opt/localcoda; rm -rf *; ln -s ../www ../img/*.sh ./; cp -r ../img/backend ./; ln -s ../../../backend/cfg backend/; exec bash'
+    docker run -u 0 -v /var/run/docker.sock:/var/run/docker.sock --name "$FRONTEND_NAME" $DOCKER_ARGS --network=host -e "LOCAL_EXT_IPPORT=$LOCAL_EXT_IPPORT" -v $APPDIR/app:/opt/app:ro -v $APPDIR/www:/opt/www:ro -v $APPDIR/../backend:/backend:ro --rm -it --entrypoint /bin/bash "$IMAGE_TORUN" -c 'cd /opt/localcoda; rm -rf *; ln -s ../www ../app/*.sh ./; cp -r ../app/backend ./; ln -s ../../../backend/cfg backend/; exec bash'
     [[ $? -ne 0 ]] && error 1 "Failed to start container"
   else
     docker run -u 0 -d --restart unless-stopped -v /var/run/docker.sock:/var/run/docker.sock --name "$FRONTEND_NAME" $DOCKER_ARGS --network=host -e "LOCAL_EXT_IPPORT=$LOCAL_EXT_IPPORT" -v $APPDIR/backend/cfg:/opt/localcoda/backend/cfg:ro "$IMAGE_TORUN"

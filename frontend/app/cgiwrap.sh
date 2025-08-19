@@ -46,6 +46,40 @@ def psuccess(data, c=200):
     else:
       print(json.dumps(data))
     sys.exit(0)
+def get_user_info(level=0):
+  #Returns None if the user authentication is disabled (all users will be able to access)
+  if 'X-USER' not in os.environ or os.environ['X-USER'] == '':
+    return None
+  #Level 0, return if the user is authenticated, or None if not
+  usr=os.environ['X-USER']
+  r={'username':usr}
+  #Level 1, return also group names
+  if level>0:
+    grp=[]
+    #Load users file (if present)
+    cf=os.environ['TUTORIALS_VOLUME_ACCESS_MOUNT']+os.sep+'users.json'
+    if os.path.isfile(cf):
+      try:
+        with open(cf,"r", encoding="utf-8") as f:
+          uf=json.load(f)
+      except json.JSONDecodeError as e:
+        perror(500,f"Invalid user file: {e}")
+      except OSError as e:
+        perror(500,f"Cannot read file. {e}")
+      #If the user is in the user file, return it
+      if 'users' in uf and usr in uf['users'] and 'groups' in uf['users'][usr]:
+        grp=uf['users'][usr]['groups']
+    r['groups']=grp
+  #Level 2, return also overrides
+  if level>1:
+    ovr={}
+    for g in grp:
+      if g in uf['groups'] and 'overrides' in uf['groups'][g]:
+        for o in uf['groups'][g]['overrides']:
+          ovr[o]=uf['groups'][g]['overrides'][o]
+    r['overrides']=ovr
+  #Return user
+  return r
 
 #Read URI
 path_info=os.environ['PATH_INFO']
@@ -53,12 +87,12 @@ path_par=path_info[path_info.find('/ctl/')+5:].split('/',1)
 cmd=path_par[0]
 arg=path_par[1] if len(path_par)>1 else ''
 
-#Get user and group
-req_user=os.environ['X-USER'] if 'X-USER' in os.environ else ''
-req_group=os.environ['X-GROUP'] if 'X-GROUP' in os.environ else ''
-
 #Execute command
 if cmd=="browse":
+  #Load user info (if any). We need only the user and the groups, so level 1. user_groups will be None if authentication is disabled, otherwise it is the list of groups which we need to match with the structure group metadata
+  user_info=get_user_info(1)
+  user_groups=None if user_info is None else user_info['groups']
+
   #Sanitize input folder
   arg=os.path.abspath(os.sep+''.join(c for c in arg if c in set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-_.")))
   tut_basepath=os.environ['TUTORIALS_VOLUME_ACCESS_MOUNT']
@@ -87,7 +121,7 @@ if cmd=="browse":
       st_prev={}
 
     #Check permissions in the old structure file (if present)
-    if req_user and ('permission' in st_prev) and not ( ( 'groups' in st_prev['permission'] and req_group in st_prev['permission']['groups'] ) or ( 'users' in st_prev['permission'] and req_user in st_prev['permission']['users'] ) ): perror(403,f"Access forbidden to {cur_path}")
+    if user_groups is not None and 'group' in st_prev and st_prev['group'] not in user_groups: perror(403,f"Access forbidden to {cur_path}")
 
     #Load a structure.json file, if present
     structfile=tut_basepath+cur_path+os.sep+"structure.json"
@@ -96,14 +130,14 @@ if cmd=="browse":
         with open(structfile,"r", encoding="utf-8") as f:
           st=json.load(f)
       except json.JSONDecodeError as e:
-        perror(200,f"Invalid structure: {e}")
+        perror(500,f"Invalid structure: {e}")
       except OSError as e:
         perror(500,f"Cannot read file. {e}")
     else:
       st={}
     
     #Check permissions in the current structure file (if present)
-    if req_user and 'permission' in st and not ( ( 'groups' in st['permission'] and req_group in st['permission']['groups'] ) or ( 'users' in st['permission'] and req_user in st['permission']['users'] ) ): perror(403,f"Access forbidden to {cur_path}")
+    if user_groups is not None and 'group' in st and st['group'] not in user_groups: perror(403,f"Access forbidden to {cur_path}")
 
     #Add title and description, if not present, use the previous, if not present, use the path as title
     if 'title' not in st:
@@ -117,22 +151,23 @@ if cmd=="browse":
 
   #Add the path list to the structure, remove what we do not need from it
   st['paths']=st_path
-  if 'permission' in st: del st['permission']
+  if 'group' in st: del st['group']
 
   #If you do not have a list of items in the structure, load it
   if 'items' not in st:
     st['items'] = [{"path": d} for d in next(os.walk(tut_abspath))[1]]
 
   #Load scenarios titles and descriptions (if not overwritten)
+  new_items=[]
   for d in st['items']:
     #Delete items not needed
     if 'advanced' in d: del d['advanced']
     #Check permissions if set and delete items who do not meet them
-    if 'permission' in d:
-      if req_user and not ( ( 'groups' in d['permission'] and req_group in d['permission']['groups'] ) or ( 'users' in d['permission'] and req_user in d['permission']['users'] ) ):
-        del d
+    if 'group' in d:
+      if user_groups is not None and d['group'] not in user_groups:
+        continue
       else:
-        del d['permission']
+        del d['group']
     #If you have a scenario ( index.json ) inside, load its title and/or description if not set
     if os.path.isfile(tut_abspath+d['path']+os.sep+'index.json'):
       d['type']='scenario';
@@ -145,8 +180,8 @@ if cmd=="browse":
         continue
       except OSError as e:
         perror(500,f"Cannot read file. {e}")
-      if 'title' not in d: d['title']=fv['title']
-      if 'description' not in d: d['description']=fv['description']
+      if 'title' not in d and 'title' in fv: d['title']=fv['title']
+      if 'description' not in d and 'description' in fv: d['description']=fv['description']
     #If you have a tutorial ( structure.json ) inside, load its title and/or description if not set
     elif os.path.isfile(tut_abspath+d['path']+os.sep+'structure.json'):
       d['type']='structure';
@@ -159,17 +194,22 @@ if cmd=="browse":
         continue
       except OSError as e:
         perror(500,f"Cannot read file. {e}")
-      if 'title' not in d: d['title']=fv['title']
-      if 'description' not in d: d['description']=fv['description']
+      if 'title' not in d and 'title' in fv: d['title']=fv['title']
+      if 'description' not in d and 'description' in fv: d['description']=fv['description']
     #If we have just sub-directories inside, still this is a structure
     else:
       d['type']='structure';
     #If still title and description is not set, set it to the name of the folder and to an empty string
     if 'title' not in d: d['title']=d['path']
     if 'description' not in d: d['description']=''
+    new_items.append(d)
+  st['items']=new_items
   psuccess(st)
 
 elif cmd=="run":
+  #Load user info (if any). We need the user, the groups and the overrides, so level 2. user_groups will be None if authentication is disabled, otherwise it is the list of groups which we need to match with the structure group metadata
+  user_info=get_user_info(2)
+  user_groups=None if user_info is None else user_info['groups']
   #Start a new scenario
   #Sanitize input folder
   arg=os.path.abspath(os.sep+''.join(c for c in arg if c in set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-_.")))
@@ -204,7 +244,7 @@ elif cmd=="run":
       st_prev={}
 
     #Check permissions in the old structure file (if present)
-    if req_user and ('permission' in st_prev) and not ( ( 'groups' in st_prev['permission'] and req_group in st_prev['permission']['groups'] ) or ( 'users' in st_prev['permission'] and req_user in st_prev['permission']['users'] ) ): perror(403,f"Access forbidden to {cur_path}")
+    if user_groups is not None and 'group' in st_prev and st_prev['group'] not in user_groups: perror(403,f"Access forbidden to {cur_path}")
 
     #Load a structure.json file, if present
     structfile=tut_basepath+cur_path+os.sep+"structure.json"
@@ -213,43 +253,46 @@ elif cmd=="run":
         with open(structfile,"r", encoding="utf-8") as f:
           st=json.load(f)
       except json.JSONDecodeError as e:
-        perror(200,f"Invalid structure: {e}")
+        perror(500,f"Invalid structure: {e}")
       except OSError as e:
         perror(500,f"Cannot read file. {e}")
     else:
       st={}
 
     #Check permissions in the current structure file (if present)
-    if req_user and 'permission' in st and not ( ( 'groups' in st['permission'] and req_group in st['permission']['groups'] ) or ( 'users' in st['permission'] and req_user in st['permission']['users'] ) ): perror(403,f"Access forbidden to {cur_path}")
+    if user_groups is not None and 'group' in st and st['group'] not in user_groups: perror(403,f"Access forbidden to {cur_path}")
 
   #Load scenario to check if it is valid
   try:
     with open(tut_abspath+"index.json","r", encoding="utf-8") as f:
       sf=json.load(f)
   except json.JSONDecodeError as e:
-    perror(200,f"Invalid scenario file: {e}")
+    perror(500,f"Invalid scenario file: {e}")
   except OSError as e:
     perror(500,f"Cannot read file. {e}")
 
-  #Check you have permissions to run the scenario
-  if req_user:
-   if 'permission' in sf and not ( ( 'groups' in sf['permission'] and req_group in sf['permission']['groups'] ) or ( 'users' in sf['permission'] and req_user in sf['permission']['users'] ) ): perror(404,"Area access forbidden")
+  #Check you have permissions to run the scenario also (not all the paths)
+  if user_groups is not None and 'group' in sf and sf['group'] not in user_groups: perror(403,f"Access forbidden!")
 
   #Check the area advanced run parameters
-  tut_areamountmode='ro'
   if 'advanced' in ar:
     if 'runpath' in ar['advanced']:
       tut_areaname=ar['advanced']['runpath']
       tut_scenariopath=arg+os.sep+'index.json'
       tut_scenariopath=tut_scenariopath[len(tut_areaname)+1:]
-    if 'mountmode' in ar['advanced']: tut_areamountmode=ar['advanced']['mountmode']
 
   #Create run command
-  cmd=['/bin/bash','/opt/localcoda/backend/bin/backend_run.sh','-q','-d',tut_areaname,tut_scenariopath]
-  if tut_areamountmode=="rw": cmd+=['-W']
-  if req_user: cmd+=['-U',req_user]
+  cmd=['/bin/bash','/opt/localcoda/backend/bin/backend_run.sh','-o','TUTORIALS_VOLUME_ACCESS_MOUNT=/data/tutorials','-q','-d',tut_areaname,tut_scenariopath]
+  if user_groups is not None:
+    #If user is authenticated, add username
+    cmd+=['-U',user_info['username']]
+    #And add overrides
+    ov=user_info['overrides']
+    for o in ov:
+      cmd+=['-o',f'{o}={ov[o]}']
   #Run command and get id as output
   r = subprocess.run(cmd, capture_output=True, text=True)
+  if r.returncode == 42: perror(429,f"Cannot start tutorial. Tutorial run returned {r.returncode}. Error was {r.stderr.strip()}.")
   if r.returncode != 0: perror(500,f"Cannot start tutorial. Tutorial run returned {r.returncode}. Error was {r.stderr.strip()}")
 
   #All ok. Id is returned
@@ -262,7 +305,10 @@ elif cmd=="ls":
 
   #Create run command
   cmd=['/bin/bash','/opt/localcoda/backend/bin/backend_ls.sh',arg]
-  if req_user: cmd+=['-U',req_user]
+
+  #Add user info (only username, level 0)
+  user_info=get_user_info(0)
+  if user_info is not None: cmd+=['-U',user_info['username']]
 
   #Run command and get its output
   r = subprocess.run(cmd, capture_output=True, text=True)
@@ -276,11 +322,16 @@ elif cmd=="stop":
   arg=''.join(c for c in arg if c in set("abcdefghijklmnopqrstuvwxyz0123456789-"))
 
   #Check you are specifying an id
-  if arg=="": perror(403,"Invalid ID")
+  if arg=="": perror(400,"Invalid ID")
 
   #First list the scenarios to check it is actually running
   cmd=['/bin/bash','/opt/localcoda/backend/bin/backend_ls.sh',arg]
-  if req_user: cmd+=['-U',req_user]
+  
+  #Add user info (only username, level 0)
+  user_info=get_user_info(0)
+  if user_info is not None: cmd+=['-U',user_info['username']]
+
+  #Run command and get its output
   r = subprocess.run(cmd, capture_output=True, text=True)
   if r.returncode != 0: perror(500,f"Cannot list tutorials. Tutorial list returned {r.returncode}")
 
@@ -292,19 +343,28 @@ elif cmd=="stop":
 
   #Look if we find the item
   ar=next((i for i in l if i.get("id") == arg), None)
-  if ar is None: perror(403,f"Id not running")
+  if ar is None: perror(400,f"Id not running")
 
   #Stop it
   cmd=['/bin/bash','/opt/localcoda/backend/bin/backend_stop.sh',arg]
-  if req_user: cmd+=['-U',req_user]
+  
+  #Add user info (only username, level 0)
+  user_info=get_user_info(0)
+  if user_info is not None: cmd+=['-U',user_info['username']]
+
+  #Run command and get its output
   r = subprocess.run(cmd, capture_output=True, text=True)
   if r.returncode != 0: perror(500,f"Cannot stop tutorial. Tutorial stop returned {r.returncode}")
 
   psuccess({"result":"ok"})
 
 elif cmd=="me":
-  #Get current user info and its configuration
-  psuccess({"user":req_user,"group":req_group})
+  #Get full user info
+  user_info=get_user_info(99)
+  if user_info:
+    psuccess(get_user_info(99))
+  else:
+    psuccess({"username":""})
 
 else:
   perror(400, "Invalid command")

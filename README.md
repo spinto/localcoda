@@ -103,6 +103,21 @@ This mode allows you to run a single tutorial on a kubernetes cluster for which 
 
 NOTE: TO BE IMPLEMENTED
 
+### Multi-scenario mode, on the local machine
+
+This mode allows oyu to run multiple scenarios on a local VM. Note that this mode is mostly for development, as it will not scale properly. To run a multi-scenario mode service you should use a kubernetes cluster backend
+
+#### Enable multi-tenant
+
+docker run -p 0.0.0.0:8080:8080 -d --name keycloak --restart unless-stopped -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:26.3.2 start-dev
+
+docker run -p 0.0.0.0:8080:8080 -d --name keycloak --restart unless-stopped -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:26.3.2 start-dev --hostname-strict=false
+
+Login to : http://keycloak.localcoda.com:8080/admin
+Create a realm
+Create some users (or integrate with your IdP of choice like github)
+
+
 ### Multi-scenario mode, on a remote kubernetes cluster
 
 This mode allows multiple users to list multiple tutorial and scenarios and start them

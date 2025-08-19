@@ -7,6 +7,8 @@ ORCHESTRATION_ENGINE=local
 TUTORIAL_MAX_TIME=-1
 #Exit upon disconnect. If true, terminates the tutorial if client disconnects (e.g. closes browser page).
 TUTORIAL_EXIT_ON_DISCONNECT=false
+#Maximum number of parallel scenarios which can be started (per user). Ignored if user is not defined. Set to -1 to disable.
+MAXIMUM_RUN_PER_USER=1
 #External host protocol (change this only if you have a proxy on front of the application to serve it as https)
 EXT_PROTO=http
 #External domain name. Note that you will need a wildcard DNS entry mapping this external domain name (*.localcoda.com in this example) and a wildcard certificate (always for *.localcoda.com in this example) if you are putting https on top, to make this application work. It will not work with a path-based scheme due to nginx redirect constraints.

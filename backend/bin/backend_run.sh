@@ -247,6 +247,11 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
   #Add username label
   if [[ -n "$INSTANCE_USERNAME" ]]; then
     DOCKER_RUN_ARGS="$DOCKER_RUN_ARGS -l user=$INSTANCE_USERNAME"
+    #Check maximum parallel executions (if reached)
+    if [[ -n "$MAXIMUM_RUN_PER_USER" && "$MAXIMUM_RUN_PER_USER" -gt 0 ]]; then
+      running_instances="`docker ps -q -f "label=user=$INSTANCE_USERNAME"`"
+      [[ "$running_instances" -ge "$MAXIMUM_RUN_PER_USER" ]] && error 43 "Maximum runs per user reached"
+    fi
   fi
 
   #Add memory and cpu limits, if any
@@ -314,6 +319,12 @@ elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
 
   #Check runtime engine
   [[ $VIRT_ENGINE != "docker" && $VIRT_ENGINE == "sysbox" ]] && error 32 "Virtualization engine $VIRT_ENGINE not supported in kubernetes mode"
+
+  #Check maximum parallel executions (if reached)
+  if [[ -n "$INSTANCE_USERNAME" && -n "$MAXIMUM_RUN_PER_USER" && "$MAXIMUM_RUN_PER_USER" -gt 0 ]]; then
+    running_instances="`kubectl get pod -n $KUBERNETES_NAMESPACE --selector "localcoda-user=$INSTANCE_USERNAME" -o name | wc -l`"
+    [[ "$running_instances" -ge "$MAXIMUM_RUN_PER_USER" ]] && error 43 "Maximum runs per user reached"
+  fi
 
   {
     cat << EOF

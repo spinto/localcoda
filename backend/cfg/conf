@@ -10,9 +10,9 @@ TUTORIAL_EXIT_ON_DISCONNECT=false
 #Maximum number of parallel scenarios which can be started (per user). Ignored if user is not defined. Set to -1 to disable.
 MAXIMUM_RUN_PER_USER=-1
 #External domain name. Note that you will need a wildcard DNS entry mapping this external domain name and a wildcard certificate if you are putting https on top, to make this application work. This application will not work with a path-based scheme due to nginx redirect constraints. By using the special \$NIP_ADDRESS variable the backend will generate and use a nip.io address mapped yo the first local external IP. If this does not work, you can use the following configuration instead
-#EXT_DOMAIN_NAME=localcoda.com
+#EXT_DOMAIN_NAME=.localcoda.com
 #and setup your /etc/hosts file or use the chrome --host-resolver-rules="MAP *.localcoda.com <your external IP>" to connect
-EXT_DOMAIN_NAME=\$NIP_ADDRESS
+EXT_DOMAIN_NAME=.\$NIP_ADDRESS
 #External host protocol (change this only if you have a proxy on front of the application to serve it as https)
 EXT_PROTO=http
 ##Advanced configuration - GENERAL
@@ -20,11 +20,11 @@ EXT_PROTO=http
 IMAGES_DOCKER_MAPFILE=cfg/imagemap.docker
 IMAGES_SYSBOX_MAPFILE=cfg/imagemap.sysbox
 #Scheme to determine the frontend application sub-domain (you should never change this, unless you know what you are doing)
-EXT_FT_MAINHOST_SCHEME="app.\$EXT_DOMAIN_NAME"
+EXT_FT_MAINHOST_SCHEME="app\$EXT_DOMAIN_NAME"
 #Scheme to determine the backend main app sub-domain (you should never change this, unless you know what you are doing)
-EXT_BK_MAINHOST_SCHEME="\$LOCAL_UUID-app.\$EXT_DOMAIN_NAME"
+EXT_BK_MAINHOST_SCHEME="\$LOCAL_UUID-app\$EXT_DOMAIN_NAME"
 #Scheme to determine the scenario proxy application sub-domain for connection to the tutorial (\$PORT will be replaced with the actual port in use, you should never change this, unless you know what you are doing)
-EXT_BK_PROXYHOST_SCHEME="\$PORT-\$LOCAL_UUID-app.\$EXT_DOMAIN_NAME"
+EXT_BK_PROXYHOST_SCHEME="\$PORT-\$LOCAL_UUID-app\$EXT_DOMAIN_NAME"
 #Backend orchestration execution identifier shcheme (you should never change this, unless you know what you are doing)
 EXECUTION_NAME_SCHEME="localcoda-bk-\$LOCAL_UUID"
 #Tutorials volume/pvc name. If this is a PVC, it is created with ReadWriteMany (you should never change this, unless you know what you are doing)

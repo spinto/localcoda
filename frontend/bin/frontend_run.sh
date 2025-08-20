@@ -73,7 +73,7 @@ while [[ "$#" -gt 0 ]]; do
    -Lp) LOCAL_EXT_IPPORT="${2%/}"; shift 2 ;;
    -Ldev) LOCAL_DEV_MODE=true; shift 1 ;;
    -Kdn) KUBERNETES_FRONTEND_REPLICAS="$2"; shift 2 ;;
-   --auth) OAUTH2_PROXY_CONF="`readlink -f $2`"; shift 2 ;;
+   --auth) OAUTH2_PROXY_CONF="`readlink -f $2`"; [[ -f "$OAUTH2_PROXY_CONF" ]] || error 33 "Auth proxy configuration does not exist or is not accessible. Try to use a valid absolute path!"; shift 2 ;;
    -h | --help) usage ;;
    *) error 1 "Unrecognized argument $1. See help!"
     ;;

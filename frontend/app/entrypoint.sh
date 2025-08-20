@@ -26,6 +26,12 @@ source $SWDIR/backend/cfg/conf
 TUTORIALS_VOLUME_ACCESS_MOUNT=/data/tutorials
 
 #Frontend host name
+#Calculate external domain name (if required)
+if [[ "$EXT_DOMAIN_NAME" =~ NIP_ADDRESS ]]; then
+  #Generate nip address hash
+  NIP_ADDRESS="`hostname -I | awk '{split($1, a, "."); printf("%02x%02x%02x%02x.nip.io\n", a[1], a[2], a[3], a[4])}'`"
+  eval EXT_DOMAIN_NAME=$EXT_DOMAIN_NAME
+fi
 eval EXT_FT_MAINHOST=$EXT_FT_MAINHOST_SCHEME
 
 #Local external IP port default

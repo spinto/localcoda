@@ -115,13 +115,18 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
     docker run -u 0 -v /var/run/docker.sock:/var/run/docker.sock --name "$FRONTEND_NAME" $DOCKER_ARGS --network=host -e "LOCAL_EXT_IPPORT=$LOCAL_EXT_IPPORT" -v $APPDIR/app:/opt/app:ro -v $APPDIR/www:/opt/www:ro -v $APPDIR/../backend:/backend:ro --rm -it --entrypoint /bin/bash "$IMAGE_TORUN" -c 'cd /opt/localcoda; rm -rf *; ln -s ../www ../app/*.sh ./; cp -r ../app/backend ./; ln -s ../../../backend/cfg backend/; exec bash'
     [[ $? -ne 0 ]] && error 1 "Failed to start container"
   else
-    docker run -u 0 -d --restart unless-stopped -v /var/run/docker.sock:/var/run/docker.sock --name "$FRONTEND_NAME" $DOCKER_ARGS --network=host -e "LOCAL_EXT_IPPORT=$LOCAL_EXT_IPPORT" -v $APPDIR/backend/cfg:/opt/localcoda/backend/cfg:ro "$IMAGE_TORUN"
+    docker run -u 0 -d --restart unless-stopped -v /var/run/docker.sock:/var/run/docker.sock --name "$FRONTEND_NAME" $DOCKER_ARGS --network=host -e "LOCAL_EXT_IPPORT=$LOCAL_EXT_IPPORT" -v $APPDIR/../backend/cfg:/opt/localcoda/backend/cfg:ro "$IMAGE_TORUN"
     [[ $? -ne 0 ]] && error 1 "Failed to start service"
 
     #Get frontend path
-    eval EXT_MAINHOST=$EXT_BK_MAINHOST_SCHEME
+    if [[ "$EXT_DOMAIN_NAME" =~ NIP_ADDRESS ]]; then
+      #Generate nip address hash
+      NIP_ADDRESS="`hostname -I | awk '{split($1, a, "."); printf("%02x%02x%02x%02x.nip.io\n", a[1], a[2], a[3], a[4])}'`"
+      eval EXT_DOMAIN_NAME=$EXT_DOMAIN_NAME
+    fi
+    eval EXT_FT_MAINHOST=$EXT_FT_MAINHOST_SCHEME
     echo "Your frontend has started and should be accessible from:
-    http://$EXT_MAINHOST/"
+    http://$EXT_FT_MAINHOST/"
   fi
 
 elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then

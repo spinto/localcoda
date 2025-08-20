@@ -141,7 +141,7 @@ if [[ "${TUTORIAL_DIR:0:1}" == "/" ]]; then
   #This is a local path, you can mount it only in the local orchestrator and no subpath is present
 	[[ $ORCHESTRATION_ENGINE == "local" ]] || error 3 "You can use a local tutorial path only for the local orchestration engine"
   #Check if tutorial exists and extract image backend info
-  [[ -f "$TUTORIAL_DIR/$INDEX_FILE" ]] || error 1 "Invalid tutorial folder or file path provided. No index.json!"
+  [[ -f "$TUTORIAL_DIR/$INDEX_FILE" ]] || error 1 "Invalid tutorial folder or scenario path provided. No index.json!"
   BACKEND_INFO=( `jq -r '.backend.imageid + " " + .backend.mountmode' < $TUTORIAL_DIR/$INDEX_FILE` )
 
 else
@@ -150,13 +150,13 @@ else
   #Check if tutorial exists and extract image backend info
 	if [[ -n "$TUTORIALS_VOLUME_ACCESS_MOUNT" ]]; then
     #Tutorial volume is mounted locally. Access it from local dir.
-		[[ -f "$TUTORIALS_VOLUME_ACCESS_MOUNT/$TUTORIAL_DIR/$INDEX_FILE" ]] || error 1 "Invalid tutorial folder or file path provided. No index.json!"
+		[[ -f "$TUTORIALS_VOLUME_ACCESS_MOUNT/$TUTORIAL_DIR/$INDEX_FILE" ]] || error 1 "Cannot find scenario path index.json in local tutorial mount!"
 		BACKEND_INFO=( `jq -r '.backend.imageid + " " + .backend.mountmode' < $TUTORIALS_VOLUME_ACCESS_MOUNT/$TUTORIAL_DIR/$INDEX_FILE` )
 	elif [[ -n "$TUTORIALS_VOLUME_ACCESS_IMAGE" ]]; then
     #Tutorial volume need to be accessed remotely. we spawn a container to do so
     if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
-			BACKEND_INFO=( `docker run --rm -v $TUTORIALS_VOLUME:/data/tutorials:ro  "$TUTORIALS_VOLUME_ACCESS_IMAGE" cat /data/tutorials/$TUTORIAL_DIR/$INDEX_FILE | jq -r '.backend.imageid + " " + .backend.mountmode'` )
-			[[ ${PIPESTATUS[0]} -ne 0 || -z "$BACKEND_INFO" ]] && error 1 "Invalid tutorial folder or file path provided. No index.json!"
+			BACKEND_INFO=( `docker run --rm -v $TUTORIALS_VOLUME:/data/tutorials:ro "$TUTORIALS_VOLUME_ACCESS_IMAGE" cat /data/tutorials/$TUTORIAL_DIR/$INDEX_FILE 2>/dev/null | jq -r '.backend.imageid + " " + .backend.mountmode'` )
+			[[ ${PIPESTATUS[0]} -ne 0 || -z "$BACKEND_INFO" ]] && error 1 "Cannot find scenario index.json in TUTORIALS_VOLUME. If this is a local scenario, use an absolute path!"
     elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
 	    log "Warning: using the kubernetes engine without a locally mounted tutorials volume is slow and not recommended. Set the TUTORIALS_VOLUME_ACCESS_MOUNT option to a local path mounting or mirroring your tutorials"
 			log "Starting tutorial access helper pod..."
@@ -213,6 +213,14 @@ for c in IMAGE_TORUN IMAGE_HOSTNAME IMAGE_MEMORY_LIMIT IMAGE_CPU_LIMIT; do
   eval [[ -z "\$$c" ]] && error 3 "Invalid $IMAGES_MAPFILE entry for $c not set. Image is not found or parameter is missing!"
 done
 
+#Calculate external domain name (if required)
+if [[ "$EXT_DOMAIN_NAME" =~ NIP_ADDRESS ]]; then
+  check_sw hostname awk
+  #Generate nip address hash
+  NIP_ADDRESS="`hostname -I | awk '{split($1, a, "."); printf("%02x%02x%02x%02x.nip.io\n", a[1], a[2], a[3], a[4])}'`"
+  eval EXT_DOMAIN_NAME=$EXT_DOMAIN_NAME
+fi
+
 #Get application paths from schemes
 eval EXT_EXITHOST=$EXT_FT_MAINHOST_SCHEME
 eval EXT_MAINHOST=$EXT_BK_MAINHOST_SCHEME
@@ -257,10 +265,11 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
 
   #Check if I have to pick up a port and if so, do so
   if [[ "$LOCAL_INT_IPPORT" =~ RANDOM_PORT ]]; then
+    check_env LOCAL_RANDOMPORT_MIN LOCAL_RANDOMPORT_MAX
     #Pick a random port
     RANDOM_PORT=
     while [[ -z "$RANDOM_PORT" ]]; do
-      RANDOM_PORT=$(( ( RANDOM << 15 | RANDOM ) % 55536 + 10000 ))
+      RANDOM_PORT=$(( RANDOM  % ( LOCAL_RANDOMPORT_MAX - LOCAL_RANDOMPORT_MIN + 1 ) + LOCAL_RANDOMPORT_MIN ))
       (echo >/dev/tcp/127.0.0.1/$RANDOM_PORT) &>/dev/null || break
     done
     #Get the new ipport

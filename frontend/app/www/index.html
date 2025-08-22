@@ -295,7 +295,7 @@
       for (g in user_info['groups']) {
         pagetext=pagetext+"<li>"+user_info['groups'][g]+"</li>";
       }
-      pagetext=pagetext+"</ul><br/>Your scenario executions will have the following:<ul>";
+      pagetext=pagetext+"</ul><br/>Your scenario executions will have the following constraints:<ul>";
       for (g in user_info['overrides']) {
         switch(g) {
           case "MAXIMUM_RUN_PER_USER":

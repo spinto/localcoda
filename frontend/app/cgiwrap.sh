@@ -377,9 +377,31 @@ elif cmd=="stop":
   psuccess({"result":"ok"})
 
 elif cmd=="me":
+  #Get config file constrains
+  try:
+    with open('/opt/localcoda/backend/cfg/conf','r') as f:
+      v={}
+      for l in f:
+        if l.startswith('MAXIMUM_RUN_PER_USER'):
+          v['MAXIMUM_RUN_PER_USER']=l.split('=',1)[1].strip().split(' ',1)[0].split('#',1)[0]
+        elif l.startswith('TUTORIAL_MAX_TIME'):
+          v['TUTORIAL_MAX_TIME']=l.split('=',1)[1].strip().split(' ',1)[0].split('#',1)[0]
+        elif l.startswith('TUTORIAL_EXIT_ON_DISCONNECT'):
+          v['TUTORIAL_EXIT_ON_DISCONNECT']=l.split('=',1)[1].strip().split(' ',1)[0].split('#',1)[0]
+        if(len(v)==3): break
+  except FileNotFoundError:
+    perror(500,f"Cannot access backend configuration. Please contact administrator")
+  except IOError as e:
+    perror(500,f"IO error while accessing backend configuration. Please contact administrator")
+
   #Get full user info
   user_info=get_user_info(99)
   if user_info:
+    #Add what is not an override
+    if 'overrides' in user_info:
+      for k in v:
+        if k not in user_info['overrides']:
+          user_info['overrides'][k]=v[k]
     #Check if you are impersonating someone
     if 'HTTP_COOKIE' in os.environ and '_localcoda_impersonate' in os.environ['HTTP_COOKIE']:
       user_info['impersonatedby']=os.environ['X-USER'] if 'X-USER' in os.environ else ""

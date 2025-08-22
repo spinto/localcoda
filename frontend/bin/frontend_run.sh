@@ -47,17 +47,15 @@ Options:
                  oauth2-proxy provider configuration TOML file.
   -o <key>=<val> override the configuration option (in the $APPDIR/cfg/conf file). See
                  the content of the $APPDIR/cfg/conf file for specific options to override
-  -Lp <ipport>   use <ipport> as loca orchestration engine ip/port for frontend. Default is $LOCAL_EXT_IPPORT.
+  -Lp <ipport>   use <ipport> as local orchestration engine ip/port for frontend. Default is $LOCAL_EXT_IPPORT.
                  NOTE: If you want to provide authentication, https, and redirect support you will need to install
                  an external proxy in front of this application.
-  -Lt <dir>      use a local tutorial directory (only for local testing and using a local orchestrator)
   -Ldev          enable development mode. This will directly mount in read/write the frontend directories from
                  this repository instead of the ones in the image. Only for development and only for local orchestrator.
 :usage
   exit 1
 }
 
-TUTORIAL_DIR=
 FRONTEND_NAME="localcoda-frontend"
 KUBERNETES_FRONTEND_REPLICAS=1
 IMAGE_TORUN=spinto/localcoda-frontend:latest
@@ -69,7 +67,6 @@ while [[ "$#" -gt 0 ]]; do
    -o) eval "$2"; shift 2 ;;
    -n) FRONTEND_NAME="$2"; shift 2 ;;
    -i) IMAGE_TORUN="$2"; shift 2 ;;
-   -Lt) TUTORIAL_DIR="${2%/}"; shift 2 ;;
    -Lp) LOCAL_EXT_IPPORT="${2%/}"; shift 2 ;;
    -Ldev) LOCAL_DEV_MODE=true; shift 1 ;;
    -Kdn) KUBERNETES_FRONTEND_REPLICAS="$2"; shift 2 ;;
@@ -90,17 +87,10 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
   check_sw docker
   check_env LOCAL_EXT_IPPORT
 
-  #Check tutorials path or volume existence
-  DOCKER_ARGS=
-  if [[ -n "$TUTORIAL_DIR" ]]; then
-    [[ -d "$TUTORIAL_DIR" ]] && error 33 "Specified tutorial directory does not exist!"
-    DOCKER_ARGS="--mount type=bind,src=$TUTORIAL_DIR,dst=$TUTORIALS_VOLUME_ACCESS_MOUNT"
-  else
-    #Check if volume image exists
-    docker volume inspect $TUTORIALS_VOLUME >/dev/null
-    [[ $? -ne 0 ]] && error 32 "Docker volume does not exists. Please run backend initialization script in backend/bin/backend_init.sh or use a local tutorial directory via the -Lt switch"
-    DOCKER_ARGS="--mount type=volume,src=$TUTORIALS_VOLUME,dst=$TUTORIALS_VOLUME_ACCESS_MOUNT,volume-nocopy"
-  fi
+  #Check if volume image exists
+  docker volume inspect $TUTORIALS_VOLUME >/dev/null
+  [[ $? -ne 0 ]] && error 32 "Docker volume $TUTORIALS_VOLUME does not exists. This is required to run the frontend. Please run backend/bin/backend_volume.sh init!"
+  DOCKER_ARGS="--mount type=volume,src=$TUTORIALS_VOLUME,dst=$TUTORIALS_VOLUME_ACCESS_MOUNT,volume-nocopy"
 
   #Enable auth2 proxy authentication
   if [[ -n "$OAUTH2_PROXY_CONF" ]]; then
@@ -112,7 +102,7 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
   echo "Starting frontend..."
   if $LOCAL_DEV_MODE; then
     echo "Running in local development mode. First thing you should do is to run the entrypoint via './entrypoint &'"
-    docker run -u 0 -v /var/run/docker.sock:/var/run/docker.sock --name "$FRONTEND_NAME" $DOCKER_ARGS --network=host -e "LOCAL_EXT_IPPORT=$LOCAL_EXT_IPPORT" -v $APPDIR/app:/opt/app:ro -v $APPDIR/www:/opt/www:ro -v $APPDIR/../backend:/backend:ro --rm -it --entrypoint /bin/bash "$IMAGE_TORUN" -c 'cd /opt/localcoda; rm -rf *; ln -s ../www ../app/*.sh ./; cp -r ../app/backend ./; ln -s ../../../backend/cfg backend/; exec bash'
+    docker run -u 0 -v /var/run/docker.sock:/var/run/docker.sock --name "$FRONTEND_NAME" $DOCKER_ARGS --network=host -e "LOCAL_EXT_IPPORT=$LOCAL_EXT_IPPORT" -v $APPDIR/app:/opt/app:ro -v $APPDIR/../backend:/backend:ro --rm -it --entrypoint /bin/bash "$IMAGE_TORUN" -c 'cd /opt/localcoda; rm -rf *; ln -s ../app/www ../app/*.sh ./; cp -r ../app/backend ./; ln -s ../../../backend/cfg backend/; exec bash'
     [[ $? -ne 0 ]] && error 1 "Failed to start container"
   else
     docker run -u 0 -d --restart unless-stopped -v /var/run/docker.sock:/var/run/docker.sock --name "$FRONTEND_NAME" $DOCKER_ARGS --network=host -e "LOCAL_EXT_IPPORT=$LOCAL_EXT_IPPORT" -v $APPDIR/../backend/cfg:/opt/localcoda/backend/cfg:ro "$IMAGE_TORUN"
@@ -132,9 +122,6 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
 elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
   check_sw kubectl
   check_env KUBERNETES_NAMESPACE KUBERNETES_FRONTEND_REPLICAS
-
-  #Tutorial dir is an option only for the local orchestrator
-  [[ -n "$TUTORIAL_DIR" ]] && error 3 "You can use a local tutorial directory only for the local orchestrator"
 
   #Check tutorials volume existence
   kubectl -n "$KUBERNETES_NAMESPACE" get pvc $TUTORIALS_VOLUME >/dev/null

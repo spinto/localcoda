@@ -1,7 +1,7 @@
-Your areas are located in the main space of the tutorial folder `/etc/localcoda/tutorial`. You can list them via
+Your areas are represented by directories located in the main space of the tutorial folder `/etc/localcoda/tutorial`{{}}. You can list them via
 
 ```
-ls -l
+ls -ld */
 ```{{exec}}
 
 Areas are just sub-folders in the main folder.

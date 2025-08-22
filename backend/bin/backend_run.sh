@@ -234,11 +234,12 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
   #Determine the tutorials mount points
   if [[ "${TUTORIAL_DIR:0:1}" == "/" ]]; then
     #This is a local bind mount
-	  DOCKER_RUN_ARGS="-v $TUTORIAL_DIR:/etc/localcoda/tutorial:$BACKEND_T_MODE"
+	  DOCKER_RUN_ARGS="--mount type=bind,src=$TUTORIAL_DIR,dst=/etc/localcoda/tutorial"
 	else
     #This is a volume mount, with an optional sub dir
-		DOCKER_RUN_ARGS="--mount type=volume,src=$TUTORIALS_VOLUME,dst=/etc/localcoda/tutorial,$BACKEND_T_MODE,volume-subpath=$TUTORIAL_DIR"
+		DOCKER_RUN_ARGS="--mount type=volume,src=$TUTORIALS_VOLUME,dst=/etc/localcoda/tutorial,volume-subpath=$TUTORIAL_DIR"
 	fi
+  [[ "$BACKEND_T_MODE" == "rw" ]] || DOCKER_RUN_ARGS="$DOCKER_RUN_ARGS,ro"
 
   #Get runtime engine
   if [[ $VIRT_ENGINE == "docker" ]]; then

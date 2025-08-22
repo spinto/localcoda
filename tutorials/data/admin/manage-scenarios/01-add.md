@@ -3,7 +3,6 @@ A localcoda scenario is composed by a folder containing an `index.json`{{}} file
 Once you have a scenario, you need to place it in one of your area folder. You can list your area folders via
 
 ```
-cd ~/tutorials
 ls -l
 ```{{exec}}
 
@@ -19,7 +18,7 @@ Now you need to fill your directory with your tutorials/scenario files (the `ind
 To download just the fails from the main branch of a git repository you can run
 
 ```
-curl -L https://github.com/killercoda/scenario-examples/tarball/main | tar zx --strip-components=1
+curl -L https://github.com/killercoda/scenario-examples/tarball/main | tar zxv --strip-components=1
 ```{{exec}}
 
 Now, you you go back to your area page, you should see the new scenario-examples folder with your scenarios example, you can pick one and start it.

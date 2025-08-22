@@ -47,28 +47,42 @@ def psuccess(data, c=200):
       print(json.dumps(data))
     sys.exit(0)
 def get_user_info(level=0):
+  def luf(_cache=None):
+    if _cache is None:
+      #Load users file (if present)
+      cf=os.environ['TUTORIALS_VOLUME_ACCESS_MOUNT']+os.sep+'users.json'
+      if os.path.isfile(cf):
+        try:
+          with open(cf,"r", encoding="utf-8") as f:
+            _cache=json.load(f)
+        except json.JSONDecodeError as e:
+          perror(500,f"Invalid user file: {e}")
+        except OSError as e:
+          perror(500,f"Cannot read file. {e}")
+    return _cache
+
   #Returns None if the user authentication is disabled (all users will be able to access)
   if 'X-USER' not in os.environ or os.environ['X-USER'] == '':
     return None
-  #Level 0, return if the user is authenticated, or None if not
   usr=os.environ['X-USER']
+  #Check if we need to impersonate an user
+  if 'HTTP_COOKIE' in os.environ and '_localcoda_impersonate' in os.environ['HTTP_COOKIE']:
+    impersonate_request=next((kv[1].strip() for kv in (p.split("=",1) for p in os.environ['HTTP_COOKIE'].replace("; ", ";").split(";")) if kv[0].strip()=="_localcoda_impersonate"), None)
+    if impersonate_request is not None:
+      #Check if we have the rights to impersonate
+      uf=luf()
+      if 'users' in uf and usr in uf['users'] and 'can_impersonate' in uf['users'][usr] and uf['users'][usr]['can_impersonate']=='true':
+        #We impersonate the user
+        usr=impersonate_request
+  #Level 0, return if the user is authenticated, or None if not
   r={'username':usr}
   #Level 1, return also group names
   if level>0:
     grp=[]
     #Load users file (if present)
-    cf=os.environ['TUTORIALS_VOLUME_ACCESS_MOUNT']+os.sep+'users.json'
-    if os.path.isfile(cf):
-      try:
-        with open(cf,"r", encoding="utf-8") as f:
-          uf=json.load(f)
-      except json.JSONDecodeError as e:
-        perror(500,f"Invalid user file: {e}")
-      except OSError as e:
-        perror(500,f"Cannot read file. {e}")
-      #If the user is in the user file, return it
-      if 'users' in uf and usr in uf['users'] and 'groups' in uf['users'][usr]:
-        grp=uf['users'][usr]['groups']
+    uf=luf()
+    if 'users' in uf and usr in uf['users'] and 'groups' in uf['users'][usr]:
+      grp=uf['users'][usr]['groups']
     r['groups']=grp
   #Level 2, return also overrides
   if level>1:
@@ -78,6 +92,10 @@ def get_user_info(level=0):
         for o in uf['groups'][g]['overrides']:
           ovr[o]=uf['groups'][g]['overrides'][o]
     r['overrides']=ovr
+  #Return also if user can impersonate
+  if level>2:
+    if 'users' in uf and usr in uf['users'] and 'can_impersonate' in uf['users'][usr]:
+      r['can_impersonate']=uf['users'][usr]['can_impersonate']
   #Return user
   return r
 
@@ -362,9 +380,31 @@ elif cmd=="me":
   #Get full user info
   user_info=get_user_info(99)
   if user_info:
-    psuccess(get_user_info(99))
+    #Check if you are impersonating someone
+    if 'HTTP_COOKIE' in os.environ and '_localcoda_impersonate' in os.environ['HTTP_COOKIE']:
+      user_info['impersonatedby']=os.environ['X-USER'] if 'X-USER' in os.environ else ""
+    #Print the user info
+    psuccess(user_info)
   else:
     psuccess({"username":""})
+elif cmd=="impersonate":
+  #Check if user can impersonate
+  user_info=get_user_info(3)
+  if 'can_impersonate' not in user_info or user_info['can_impersonate']!='true': perror(403,"User has no rights to impersonate")
+  if 'QUERY_STRING' not in os.environ or os.environ['QUERY_STRING'] is None: perror(400,"bad request")
+  usr_value = next((p.split("=",1)[1] for p in os.environ['QUERY_STRING'].split("&") if p.startswith("usr=")), None)
+  if usr_value is None: perror(400,"bad request")
+  urldecode = lambda s: "".join(chr(int(s[i+1:i+3],16)) if s[i]=="%" else (" " if s[i]=="+" else s[i]) for i in range(len(s)) if s[i]!="%" or i+2<len(s))
+  usr_value_dec = urldecode(usr_value)
+  print(f"Set-Cookie: _localcoda_impersonate={usr_value_dec};")
+  print("Location: /")
+  perror(302,"done")
 
+elif cmd=="unimpersonate":
+  #Clear cookie
+  print("Set-Cookie: _localcoda_impersonate=; Expires=Thu, 01 Jan 1970 00:00:00 GMT;")
+  print("Location: /")
+  perror(302,"done")
+  
 else:
   perror(400, "Invalid command")

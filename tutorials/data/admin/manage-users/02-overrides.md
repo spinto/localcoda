@@ -6,6 +6,6 @@ Groups allow you also to control "overrides", which are specific user configurat
 The overrides are assigned to groups, which are then assigned to users. So, if you want your users in the "testgroup" to be able to run tutorials only for upt 5 minutes and only one tutorial at the time, you can run
 
 ```
-users-mgr set group testgroup TUTORIAL_MAX_TIME=300 MAXIMUM_RUN_PER_USER=1
-```
+user-mgr set group testgroup TUTORIAL_MAX_TIME=300 MAXIMUM_RUN_PER_USER=1
+```{{exec}}
 

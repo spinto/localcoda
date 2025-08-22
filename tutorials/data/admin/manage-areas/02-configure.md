@@ -17,7 +17,7 @@ Now your you should see the updated area from [the Areas page]({{TRAFFIC_MAINAPP
 If you want to remove some parameter, for example restore the default there, you can run
 
 ```
-area-mgr unset test=area theme
+area-mgr unset test-area theme
 ```{{exec}}
 
 At this point you should add scenarios to this area. There is a tutorial for this in the "admin" area, which is accessible for the administrators. If you want to allow users who can access only the new area you created to be able to create scnearios there you can copy the manage-scenario folder inside the new area via

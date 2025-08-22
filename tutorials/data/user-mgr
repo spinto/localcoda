@@ -76,8 +76,14 @@ elif [[ "$cmd" == "set" ]]; then
           [[ "$?" -eq 0 ]] || error 33 "something failed in $s update. you may want to check your localcoda instance to see if all is still well..."
           ;;
         can_impersonate)
-          echo "Allowing user $n to impersonate other users..."
-          jq ".users[\"$n\"].can_impersonate = true" $s > $s.new && mv $s.new $s
+          if [[ "$v" == "true" ]]; then
+            echo "Allowing user $n to impersonate other users..."
+          elif [[ "$v" == "false" ]]; then
+            echo "Removing user $n right to impersonate other users..."
+          else
+            error 33 "Value of the can_impersonate paramter can be only true or false"
+          fi
+          jq ".users[\"$n\"].can_impersonate = \"$v\"" $s > $s.new && mv $s.new $s
           [[ "$?" -eq 0 ]] || error 33 "something failed in $s update. you may want to check your localcoda instance to see if all is still well..."
           ;;
         *) error 45 "parameter $k is not known!" ;;

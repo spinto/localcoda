@@ -295,13 +295,54 @@
       for (g in user_info['groups']) {
         pagetext=pagetext+"<li>"+user_info['groups'][g]+"</li>";
       }
-      pagetext=pagetext+"</ul><br/>You have the following special rights configured:<ul>";
+      pagetext=pagetext+"</ul><br/>Your scenario executions will have the following:<ul>";
       for (g in user_info['overrides']) {
-        pagetext=pagetext+"<li>"+g+"="+user_info['overrides'][g]+"</li>";
+        switch(g) {
+          case "MAXIMUM_RUN_PER_USER":
+            if(user_info['overrides'][g]==-1){
+              pagetext=pagetext+"<li>You can start an unlimited number of scenarios in parallel</li>";
+            }else{
+              pagetext=pagetext+"<li>You can start at maximum "+user_info['overrides'][g]+" scenarios in parallel.</li>";
+            }
+            break;
+          case "TUTORIAL_MAX_TIME":
+            if(user_info['overrides'][g]==-1){
+              pagetext=pagetext+"<li>Your scenarios will be active for an unlimited time.</li>";
+            }else{
+              mt = user_info['overrides'][g]
+              hours = Math.floor(mt / 3600);
+              minutes = Math.floor((mt - (hours * 3600)) / 60);
+              rt='';
+              if(hours > 0) {
+                rt=hours.toString() +' hours and ';
+              }
+              rt=rt+minutes.toString()+' minutes';
+              pagetext=pagetext+"<li>Your scenarios will be active for up to "+rt+", then they will be removed automatically.</li>";
+            }
+            break;
+          case "TUTORIAL_EXIT_ON_DISCONNECT":
+            if(user_info['overrides'][g]=="true"){
+              pagetext=pagetext+"<li>Scenarios will be terminated upon closure of the browser tab</li>";
+            }else{
+              pagetext=pagetext+"<li>Scenarios will persist upon closure of the browser tab. You will find them in the <a href='#list'>Scenarios page</a> and you will be able to reconnect to them.</li>";
+            }
+            break;
+          default:
+            pagetext=pagetext+"<li>"+g+"="+user_info['overrides'][g]+"</li>";
+        }
       }
-      pagetext=pagetext+"</ul><br/>If you want to Logout click <a href='oauth2/sign_out'>Logout</a>";
-
+      pagetext=pagetext+"</ul><br/>If you want to Logout click <a href='oauth2/sign_out'>Logout</a><br/>";
+      if ("impersonatedby" in user_info) {
+        pagetext=pagetext+"<br/>You have been impersonating this user. To un-impersonate click <a href='ctl/unimpersonate'>Unimpersonate</a>";
+      }
+      if ("can_impersonate" in user_info && user_info["can_impersonate"]=="true"){
+        pagetext=pagetext+"<br/>You can impersonate a user. To do so, click <button onclick='impersonate()'>Impersonate</button>";
+      }
       document.getElementById('t').innerHTML=pagetext;
+    }
+    function impersonate(){
+      userInput = prompt("Enter the ID of the user to impersonate");
+      if (userInput !== null) window.location='ctl/impersonate?usr='+userInput;
     }
     async function loadPageBrowse(cl) {
       if (!cl.startsWith('browse')){

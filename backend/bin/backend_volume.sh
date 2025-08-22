@@ -29,7 +29,7 @@ TAPPDIR="${APPDIR%/*}"; TAPPDIR="${TAPPDIR%/}/tutorials/data"
 [[ -e "$TAPPDIR" ]] || error 1 "Cannot find tutorials dir at $TAPPDIR"
 
 #Load commandline options
-APP_VERSION=0.0.1
+APP_VERSION=0.0.2
 function usage {
   cat <<:usage
 localcoda backend volume management version $APP_VERSION

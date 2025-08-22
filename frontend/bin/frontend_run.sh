@@ -30,7 +30,7 @@ APPDIR="${SWDIR%/*}"
 source $APPDIR/../backend/cfg/conf
 
 #Load commandline options
-APP_VERSION=0.0.1
+APP_VERSION=0.0.2
 function usage {
   cat <<:usage
 localcoda frontend run version $APP_VERSION
@@ -272,8 +272,8 @@ EOF
 
   #Wait for pod to be ready (if requested)
   echo "Waiting for $FRONTEND_NAME to start..."
-  kubectl -n "$KUBERNETES_NAMESPACE" rollout status deployment/$FRONTEND_NAME --timeout=60s
-  [[ $? -ne 0 ]] && error 54 "Frontend did not start in 60 seconds. Something is wrong..."
+  kubectl -n "$KUBERNETES_NAMESPACE" rollout status deployment/$FRONTEND_NAME --timeout=300s
+  [[ $? -ne 0 ]] && error 54 "Frontend did not start in 5 minutes. Something may be wrong..."
 
   #Tutorial is started
   echo "Your frontend has started and is accessible from:

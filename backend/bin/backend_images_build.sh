@@ -16,7 +16,7 @@ cd "${SWDIR%/*}"; SWDIR="$PWD"
 APPDIR="${SWDIR%/*}"
 
 #Parse command line parameters
-APP_VERSION=0.0.1
+APP_VERSION=0.0.2
 function usage {
   cat <<:usage
 localcoda backend build images utility version $APP_VERSION

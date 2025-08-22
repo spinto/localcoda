@@ -31,7 +31,7 @@ WWWDIR="$APPDIR/www"
 source $APPDIR/cfg/conf
 
 #Load commandline options
-APP_VERSION=0.0.1
+APP_VERSION=0.0.2
 function usage {
   cat <<:usage
 localcoda backend ls version $APP_VERSION

@@ -63,7 +63,7 @@ If you have the above, then first download the localcoda latest release via
 git clone https://github.com/spinto/localcoda
 ```
 
-Edit the `backend\cfg\conf` file and set:
+Edit the `backend/cfg/conf` file and set:
 - `ORCHESTRATION_ENGINE=kubernetes`
 - `EXT_DOMAIN_NAME` to a DNS address mapping the Kubernetes Ingress external load balancer IP. If you do not have a DNS server on your disposal, you can use a [nip.io](https://sslip.io/) address or your custom address (which will need to be mapped into your /etc/hosts file)
 

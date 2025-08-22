@@ -30,7 +30,7 @@ APPDIR="${SWDIR%/*}"
 source $APPDIR/cfg/conf
 
 #Load commandline options
-APP_VERSION=0.0.1
+APP_VERSION=0.0.2
 function usage {
   cat <<:usage
 localcoda backend stop version $APP_VERSION

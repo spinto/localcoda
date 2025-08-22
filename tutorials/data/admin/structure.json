@@ -1,0 +1,9 @@
+{
+  "title": "Administration tools",
+  "description": "Use these to manage your localcoda instance",
+  "items": [
+    { "path": "manage-areas" },
+    { "path": "manage-scenarios" },
+    { "path": "manage-users" }
+  ]
+}

@@ -1,0 +1,7 @@
+Localcoda allows you to organise scenarios in tutorials (groups of scenarios), by using a `structure.json`{{}} file. This file is also compatible with the [Killercoda](https://killercoda.com/creators) format. An example file is [here](https://github.com/killercoda/scenario-examples-courses/blob/main/structure.json).
+
+Differently from Killercoda, localcoda supports unlimited nesting of `structure.json`{{}} files. In addition, it supports the following additional parameters in the `structure.json`{{}} file:
+- ***img***: A URI linking an image to diplay in the tile. This URI need to point to an external resource or be a data URI, as serving of images contained in the scenario folders is not supported.
+- ***theme***: Color of the tile, allowed themes are 'red, blue, green, yellow, orange, purple, pink, grey, navy, brown, black, white' with additional potential '-light' and '-dark' suffixes.
+- ***group***: If authentication is enabled, this tutorial will be accessible only from people in this group. If group is not set or empty, then all users can access it. You can define a "group" in both the "items" field of the `structure.json`{{}} or the top-level `structure.json`{{}}. In addition, you can also specify a "group" in the `index.json` file of the scenario. If authentication is enabled, localcoda will check that the user is a member of all the "group" from the main area to all the tutorials `structure.json` till the scenario `index.json`.
+

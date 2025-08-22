@@ -10,8 +10,7 @@ RUN apt update && apt-get upgrade -y && DEBIAN_FRONTEND=noninteractive apt-get i
 #Nicer shell loggin
 RUN echo "PS1='\\\\[\\\\e]0;\\\\h: \\\\w\\\\a\\\\]\\\\h:\\\\w$ '" >> /root/.bashrc
 
-#Local-coda specific application installation
-RUN apt update && apt-get upgrade -y && DEBIAN_FRONTEND=noninteractive apt-get install -y nginx bash jq && apt clean all && rm -rf /var/lib/apt/lists/* && systemctl disable nginx && curl -L https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.i686 > /usr/bin/ttyd && chmod +x /usr/bin/ttyd
-COPY entrypoint.sh /etc/localcoda/entrypoint.sh
+#Local-coda specific application installation (systemd version / non-blocking entrypoint version)
 COPY localcoda.service /etc/systemd/system/localcoda.service
-RUN systemctl enable localcoda 
+RUN apt update && apt-get upgrade -y && DEBIAN_FRONTEND=noninteractive apt-get install -y nginx bash jq && apt clean all && rm -rf /var/lib/apt/lists/* && systemctl disable nginx && curl -L https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 > /usr/bin/ttyd && chmod +x /usr/bin/ttyd && systemctl enable localcoda
+COPY localcoda-app /etc/localcoda

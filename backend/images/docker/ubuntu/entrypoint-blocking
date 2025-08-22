@@ -1,5 +1,0 @@
-/etc/localcoda/entrypoint.sh
-sleep inf &
-blockingpid=$!
-echo $blockingpid > /etc/localcoda/entrypoint-blocking.pid
-wait $blockingpid

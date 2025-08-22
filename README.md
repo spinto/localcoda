@@ -8,15 +8,13 @@ Run interactive learning tutorials on your own server (or your own Kubernetes cl
 
 This project is heavily inspired by [Killercoda](https://killercoda.com/) and in no way wants to be a replacement of the [Killercoda](https://killercoda.com/) platform. [Killercoda](https://killercoda.com/) is amazing, and you should use it (and buy their Plus membership). Anyway, there are some limitations in Killercoda, one is that, even with the plus membership, you have at maximum 4GB of RAM and limited CPU power, which may be an issue for some applications, and that the tutorial that you publish are public (even if set not searchable), and you may have some proprietary application you may not want to share in the tutorial, but bind (with its license) in an underlying private image. This project addresses such niche use cases.
 
-## Usage
+## Quickstart
 
 ### Single-scenario run, on a local machine
 
-In this mode you can run a single scenario from a tutorial locally on your machine. You will need, as minimum, [Docker](https://www.docker.com/) to be installed on the machine 
+In this mode you can run a single scenario from a tutorial locally on your machine. You will need, as minimum, [Docker](https://www.docker.com/) to be installed on the machine.
 
-#### Quickstart
-
-To run a single tutorial instance you need first to download your tutorial locally. If you want to run one of the ["examples" scenarios](https://github.com/killercoda/scenarios-docker) from killercoda you can download them from the gitlab via
+First you need to download your scenarios locally. If you want to run one of the ["examples" scenarios](https://github.com/killercoda/scenarios-docker) from killercoda you can download them from the gitlab via
 
 ```
 git clone https://github.com/killercoda/scenario-examples
@@ -35,70 +33,74 @@ Ensure you have docker installed and you can run it in your use
 docker ps
 ```
 
-Then run the scenario via
+Then run the scenario via (note the use of the absolute path for the downloaded tutorial folder, which is required for local scenario run)
 
 ```
-backend/bin/backend_run.sh ../scenario-examples upload-assets/index.json
+backend/bin/backend_run.sh $PWD/../scenario-examples upload-assets/index.json
 ```
 
 If all goes well, you will have now your scenario stated at an url like
 
 ```
-http://app.localcoda.com/
+http://cc1934ba-ac00-4388-9208-eda7af057679-app.0a1d0903.nip.io:33406
 ```
 
-You need now to connect to this address. Anyway, you may not have this address setup in your DNS, so you need to allow your browser to resolve it to the IP of your machine. If you do not have your own DNS service, you can then use Chrome (or any other Chrominum based browser) and start it with the `--host-resolver-rules="MAP *.localcoda.com <ip-of-your-machine>"` option
+You need now to connect to this address (and ignore the "site is not secure" alerts, if any).
 
-#### Run using sysbox
+Once you have completed your scenario, you can stop it by executing the `poweroff` command in the scenario web shell or by using the `backend/bin/backend_stop.sh` command (with the id of your scenario).
 
-The quickstart above will use the default docker virtualization engine to run your tutorial. Docker capabilities are limited, in particular it does not allow to have containers with systemd and requires admin privileges to be given to the container to run docker-in-docker. Thus, not all the tutorials can run on the docker virtualization engine, but only the one that do not make a big use of systemd.
+### Full mode, on a Kubernetes cluster
 
-If your tutorial does not work or you want to be more sure your tutorial environment cannot be escaped easily, you can run the backend with the [sysbox](https://github.com/nestybox/sysbox) virtualization engine.
+In the full mode, you will deploy a multi-tutorial and multi-user option on a Kubernetes cluster.
 
-To use sysbox, you need first to meet the [sysbox requirements](https://github.com/nestybox/sysbox/blob/master/docs/distro-compat.md), which are met for the latest Ubuntu 24.04 LTS distribution, and then you need to install it following the [sysbox official installation guide](https://github.com/nestybox/sysbox/blob/master/docs/user-guide/install-package.md)
+In order to deploy localcoda on a on a Kubernetes cluster you need
+- A [Kubernetes](https://kubernetes.io/) client (kubectl) is installed and configured on your cluster. To check this works, you can run `kubectl get pods`. If it gives you no error, you should be fine.
+- Your Kubernetes cluster supports [ReadWriteMany](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes) Access Mode for your PVCs. This is not entirely common, you may have to install an [NFS provisioner](https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner) or a custom CSI controller (like [Longhorn](https://longhorn.io/)) to enable this.
 
-Once you have sysbox installed, test it properly works via
-
-```
-docker run --runtime=sysbox-runc --rm -it busybox /bin/echo successful run
-```
-
-Then you can run a scenario via sysbox by selecting the sysbox engine with
+If you have the above, then first download the localcoda latest release via
 
 ```
-backend/bin/backend_run.sh -o VIRT_ENGINE=sysbox ../scenarios-docker environment-variables/index.json
+git clone https://github.com/spinto/localcoda
 ```
 
-#### More advanced parameters
+Edit the `backend/cfg/conf` file and set:
+- `ORCHESTRATION_ENGINE=kubernetes`
+- `EXT_DOMAIN_NAME` to a DNS address mapping the Kubernetes Ingress external load balancer IP. If you do not have a DNS server on your disposal, you can use a [nip.io](https://sslip.io/) address or your custom address (which will need to be mapped into your /etc/hosts file)
 
-A full help of the single-scenario run script can be obtained by running
-
-```
-backend/bin/backend_run.sh --help
-```
-
-An advanced list of configuration options is included in the file
+Create the localcoda default namespace via
 
 ```
-backend/cfg/conf
+kubectl create namespace localcoda
 ```
 
-#### Use custom images
+Create an admin/admin user account (which we will use for initial setup)
 
-This software comes with two basic images, one implmenting a single node kubernetes cluster (stable version) and one implementing a ubuntu (with docker) machine. You can anyway setup new images.
+```
+echo 'admin:$2y$05$V5LcntAIsPpcra54gIebGe/6gER/FW8dwzU2em0iG/C3Q/5oRW0Ye' > tutorials/data/users.htpasswd
+```
 
-To do so, you can have a look at the images folder in this repository. A new image can be created as a new directory. The entrypoint (and service, if you are using systemd) need to be configured in your image. You can have a look at the existing images configuration and extend their dockerfiles.
+Initialize the localcoda tutorial volume. This will be used to store users configuration, scenarios, etc..
 
-The images can be built via the `backend/bin/images_build.sh` script. 
+```
+backend/bin/backend_volume.sh init
+```
 
-### Single-scenario run, on a remote kubernetes cluster
+Run the frontend with local httpasswd authentication enabled via
 
-This mode allows you to run a single tutorial on a kubernetes cluster for which you have rights
+```
+frontend/bin/frontend_run.sh --auth $PWD/frontend/cfg/oauth2-proxy.htpasswd.cfg
+```
 
-NOTE: TO BE IMPLEMENTED
+Once executed successfully, you can connect at the listed address and login via with the admin/admin account.
 
-### Multi-scenario mode, on a remote kubernetes cluster
+You can then execute the tutorials in the "Admin" are to get information on how to manage users, add scenarios, configure permissions, etc...
 
-This mode allows multiple users to list multiple tutorial and scenarios and start them
+## Configuration
 
-NOTE: TO BE IMPLEMENTED
+The main application configuration is contained in the `backend/cfg/conf` file. Options are described in the file, and allow you to fine-tune scenario execution parameters such as the possibility to auto-terminate scenarios after a given time, limit parallel scenarios runs or configure deployment options.
+
+For more information about specific configuration options, like adding your own custom backend scenario image or using the sysbox virtualization engine for additional security and isolation, you can refer to the [ADVANCED_CONFIG.md](docs/ADVANCED_CONFIG.md) guide. Have a look at it if you want to setup a production environment.
+
+## More deployment options
+
+The quickstart mode on top displays only some of the most common deployments and basic customizations. There are other modes you can deploy, like the full mode on a local server instead of a Kubernetes cluster, or a multi-tutorial mode without authorization. For a detailed deployment guide on a single virtual machine, you can look at the [DEPLOY_LOCAL.md](docs/DEPLOY_LOCAL.md) file. For a detailed deployment guive on a Kubernetes cluster, you can look at the [DEPLOY_KUBERNETES.md](docs/DEPLOY_KUBERNETES.md) file.

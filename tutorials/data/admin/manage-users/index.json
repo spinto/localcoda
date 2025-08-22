@@ -1,0 +1,34 @@
+{
+  "title": "Manage users",
+  "description": "Add/edit/manage users.",
+  "group": "admin",
+  "details": {
+    "intro": {
+      "text": "00-intro.md",
+      "title": "Intro",
+			"background": "initialize.sh"
+    },
+    "steps": [
+      {
+        "text": "01-add.md",
+        "title": "Assign an user to a group"
+      },
+      {
+        "text": "02-overrides.md",
+        "title": "Configure special permissions for an user"
+      },
+      {
+        "text": "03-impersonate.md",
+        "title": "Impersonate an user (and manage its processes)"
+      },
+      {
+        "text": "04-remove.md",
+        "title": "Remove user authorization"
+      }
+    ]
+  },
+  "backend": {
+    "imageid": "ubuntu",
+    "mountmode": "rw"
+  }
+}

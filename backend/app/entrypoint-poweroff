@@ -1,0 +1,3 @@
+#!/bin/bash
+#Mimic poweroff command by killing the read block into the blocking endpoint
+touch /etc/localcoda/entrypoint-blocking.pause

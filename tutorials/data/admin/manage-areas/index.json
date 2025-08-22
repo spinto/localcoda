@@ -1,0 +1,30 @@
+{
+  "title": "Manage areas",
+  "description": "Add/edit or remove areas.",
+  "group": "admin",
+  "details": {
+    "intro": {
+      "text": "00-intro.md",
+      "title": "Intro",
+			"background": "initialize.sh"
+    },
+    "steps": [
+      {
+        "text": "01-add.md",
+        "title": "Create a new area"
+      },
+      {
+        "text": "02-configure.md",
+        "title": "Configure an area"
+      },
+      {
+        "text": "03-remove.md",
+        "title": "Removing an area"
+      }
+    ]
+  },
+  "backend": {
+    "imageid": "ubuntu",
+    "mountmode": "rw"
+  }
+}

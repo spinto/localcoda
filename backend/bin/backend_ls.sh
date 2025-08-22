@@ -3,7 +3,7 @@
 
 #Basic functions
 function error(){
-  echo "ERROR: $2"
+  echo "ERROR: $2" >&2
   exit $1
 }
 function check_sw(){
@@ -22,14 +22,16 @@ function check_env(){
 check_sw jq readlink grep
 
 #Get app directory and load basic configuration
-SWDIR="`readlink -f "$0"`"; SWDIR="${SWDIR%/*}"
-APPDIR="`readlink -f "${SWDIR%/*}"`"; APPDIR="${APPDIR%/}"
-WWWDIR=`readlink -f $APPDIR/www`
+SWDIR="${BASH_SOURCE[0]}"
+[[ "${SWDIR:0:1}" == "/" ]] || SWDIR="$PWD/$SWDIR"
+cd "${SWDIR%/*}"; SWDIR="$PWD"
+APPDIR="${SWDIR%/*}"
+WWWDIR="$APPDIR/www"
 [[ -e "$APPDIR/cfg/conf" ]] || error 1 "Cannot find configuration file at $APPDIR/cfg/conf"
 source $APPDIR/cfg/conf
 
 #Load commandline options
-APP_VERSION=0.0.1
+APP_VERSION=0.0.2
 function usage {
   cat <<:usage
 localcoda backend ls version $APP_VERSION
@@ -44,14 +46,18 @@ Options:
   -h             displays this help page
   -o <key>=<val> override the configuration option (in the $APPDIR/cfg/conf file). See
                  the content of the $APPDIR/cfg/conf file for specific options to override
+  -U <username>  filter running instance by a given <username>. Useful if you are managing
+                 multi-tenant executions
 :usage
   exit 1
 }
 
 LOCAL_UUID=
+INSTANCE_USERNAME=
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
    -o) eval "$2"; shift 2 ;;
+   -U) INSTANCE_USERNAME="$2"; shift 2 ;;
    -h | --help) usage ;;
    *) if [[ -z "$LOCAL_UUID" ]]; then
 	      LOCAL_UUID="$1"
@@ -63,42 +69,55 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 #Check required configuration is set
-check_env VIRT_ENGINE ORCHESTRATION_ENGINE EXECUTION_NAME_SCHEME
-if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
-  check_sw docker
-	check_env LOCAL_IPPORT
-elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
-  check_sw kubectl
-else
-	error 2 "Orchestration engine $ORCHESTRATION_ENGINE is invalid!"
-fi
-if [[ $VIRT_ENGINE == "docker" ]]; then
-  #nothing to do
-  true
-elif [[ $VIRT_ENGINE == "sysbox" ]]; then
-  #nothing to do
-  true
-else
-  error 2 "Virtualization engine $VIRT_ENGINE is invalid!"
-fi
+check_env ORCHESTRATION_ENGINE EXECUTION_NAME_SCHEME 
 
-#Set defaults
+#Calculate dynamic paths
+eval INT_BASEPATH=$INT_BASEPATH_SCHEME
 eval EXECUTION_NAME=$EXECUTION_NAME_SCHEME
 
 #Use the orchestration engine to run the backend instance
 if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
+  check_sw docker
 
-  {
-    echo "Backend instance|Ready" 
-    docker ps -f "name=$EXECUTION_NAME" --format '{{.Names}}' | while read cn; do
-      #get info from container
-      rs="`docker exec $cn /bin/bash -c '[[ -e /etc/localcoda/ready ]] && cat /etc/localcoda/ready'`"
-      echo "$cn|$rs"
-    done
-  } | column -t -s '|'
+  echo "["
+  DOCKER_EXTRA_SEL=
+  [[ -n "$INSTANCE_USERNAME" ]] && DOCKER_EXTRA_SEL="-f label=user=$INSTANCE_USERNAME"
+  s=
+  docker ps -f "name=$EXECUTION_NAME" $DOCKER_EXTRA_SEL --format '{{.Names}}' | while read cn; do
+    #get info from container
+    docker exec $cn /bin/bash -c '[[ -e /etc/localcoda/ready ]]'
+    if [[ $? -ne 0 ]]; then
+      rs="false"
+    else
+      rs="true"
+    fi
+    cat << EOF
+  $s{
+    "id":"`docker inspect $cn --format '{{ index .Config.Labels "instanceid" }}'`",
+    "user":"`docker inspect $cn --format '{{ index .Config.Labels "user" }}'`",
+    "ready":"$rs",
+    "access_url":"`docker inspect $cn --format '{{ index .Config.Labels "readyurl" }}'`",
+    "instance_name":"$cn",
+    "tutorial_path":"`docker inspect $cn --format '{{ index .Config.Labels "tutorialpath" }}'`",
+    "start_time": "`docker inspect $cn --format '{{ index .Config.Labels "starttime" }}'`",
+    "max_time": "`docker inspect $cn --format '{{ index .Config.Labels "maxtime" }}'`"
+  }
+EOF
+    [[ -z "$s" ]] && s=,
+  done
+  echo "]"
 
-elif $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
-  error 99 "not implemented"
+elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
+  check_sw kubectl
+  check_env KUBERNETES_NAMESPACE
+
+  KUBECTL_EXTRA_SEL=
+  [[ -n "$INSTANCE_USERNAME" ]] && KUBECTL_EXTRA_SEL=",localcoda-user=$INSTANCE_USERNAME"
+  kubectl get pod -n "$KUBERNETES_NAMESPACE" --selector=localcoda-instanceid,job-name$KUBECTL_EXTRA_SEL -o jsonpath='{"["}{range .items[*]}{"{\"id\":\""}{.metadata.labels.localcoda-instanceid}{"\",\"user\":\""}{.metadata.labels.localcoda-user}{"\",\"ready\":\""}{.status.containerStatuses[*].ready}{"\",\"access_url\":\""}{.metadata.annotations.readyurl}{"\",\"instance_name\":\"job/"}{.metadata.labels.job-name}{"\",\"tutorial_path\":\""}{.metadata.annotations.tutorialpath}{"\",\"start_time\":\""}{.metadata.annotations.starttime}{"\",\"max_time\":\""}{.metadata.annotations.maxtime}{"\"},"}{end}{"]"}' | sed 's/,]$/]/'
+  [[ $? -ne 0 ]] && error 44 "Failed to run kubernetes get pod"
+
+else
+  error 2 "Orchestration engine is invalid!"
 fi
 #all done correctly if we are at this point
 exit 0

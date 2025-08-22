@@ -1,28 +1,48 @@
-##General configuration options for backend
-#Allowed virtualization engines supported at the moment are docker or sysbox
-VIRT_ENGINE=sysbox
+##General configuration options
+#Allowed virtualization engines supported for backend are docker or sysbox. Frontend will always use docker.
+VIRT_ENGINE=docker
 #Allowed orchestration engines supported at the moment are local and kubernetes
-ORCHESTRATION_ENGINE=local
+ORCHESTRATION_ENGINE=kubernetes
 #Default tutorial duration (in seconds). Set to "-1" to disable.
 TUTORIAL_MAX_TIME=-1
 #Exit upon disconnect. If true, terminates the tutorial if client disconnects (e.g. closes browser page).
 TUTORIAL_EXIT_ON_DISCONNECT=false
-#External host name (for connection to the tutorial)
-EXT_MAINHOST=app.localcoda.com
-#External proxy host name (for connection to the tutorial, PORT will be replaced with the action port in use)
-EXT_PROXYHOST=app-PORT.localcoda.com
-#Base directory for tutorials (if mounted locally)
-TUTORIALS_MOUNT_POINT=/data/tutorials
-##Advanced configuration
-#Local orchestration engine mount port
-LOCAL_IPPORT=0.0.0.0:80
+#Maximum number of parallel scenarios which can be started (per user). Ignored if user is not defined. Set to -1 to disable.
+MAXIMUM_RUN_PER_USER=-1
+#External domain name. Note that you will need a wildcard DNS entry mapping this external domain name and a wildcard certificate if you are putting https on top, to make this application work. This application will not work with a path-based scheme due to nginx redirect constraints. By using the special \$NIP_ADDRESS variable the backend will generate and use a nip.io address mapped yo the first local external IP. If this does not work, you can use the following configuration instead
+#EXT_DOMAIN_NAME=.localcoda.com
+#and setup your /etc/hosts file or use the chrome --host-resolver-rules="MAP *.localcoda.com <your external IP>" to connect
+EXT_DOMAIN_NAME=-lc.eoepca-sciencehub.esa.int
+#External host protocol (change this only if you have a proxy on front of the application to serve it as https)
+EXT_PROTO=http
+##Advanced configuration - GENERAL
 #Image basemap files for different virtualization engines (you need to change the content of this file to add additional images or use different images in your tutorials).
 IMAGES_DOCKER_MAPFILE=cfg/imagemap.docker
 IMAGES_SYSBOX_MAPFILE=cfg/imagemap.sysbox
-#Virtualization engine remote port (you should never change this, unless you know what you are doing)
-REMOTE_PORT=1
-#Backend serving URL scheme (you should never change this, unless you know what you are doing)
-INT_BASEPATH_SCHEME="/scenario/run/\$LOCAL_UUID"
+#Scheme to determine the frontend application sub-domain (you should never change this, unless you know what you are doing)
+EXT_FT_MAINHOST_SCHEME="app\$EXT_DOMAIN_NAME"
+#Scheme to determine the backend main app sub-domain (you should never change this, unless you know what you are doing)
+EXT_BK_MAINHOST_SCHEME="\$LOCAL_UUID-app\$EXT_DOMAIN_NAME"
+#Scheme to determine the scenario proxy application sub-domain for connection to the tutorial (\$PORT will be replaced with the actual port in use, you should never change this, unless you know what you are doing)
+EXT_BK_PROXYHOST_SCHEME="\$PORT-\$LOCAL_UUID-app\$EXT_DOMAIN_NAME"
 #Backend orchestration execution identifier shcheme (you should never change this, unless you know what you are doing)
-EXECUTION_NAME_SCHEME="localcoda-\${VIRT_ENGINE}-backend-\$LOCAL_UUID"
-
+EXECUTION_NAME_SCHEME="localcoda-bk-\$LOCAL_UUID"
+#Tutorials volume/pvc name. If this is a PVC, it is created with ReadWriteMany (you should never change this, unless you know what you are doing)
+TUTORIALS_VOLUME="localcoda-tutorials"
+#Local mount of the tutorials volume. If set, backend will check the volume againist this path, avoiding accessing the volume via specific containers. Note that, if running the backend via the frontend, this parameter is ignored and always set to /data/tutorial , which is the hardocded mount path in the frontend (you should never change this, unless you know what you are doing)
+TUTORIALS_VOLUME_ACCESS_MOUNT=
+#Local volume access image to use. Must be set if TUTORIALS_VOLUME_ACCESS_MOUNT is not set. It is recommended to set TUTORIALS_VOLUME_ACCESS_MOUNT instead of this, otherwise you need to spawn a new container all the time you need to access a tutorial (you should never change this, unless you know what you are doing)
+TUTORIALS_VOLUME_ACCESS_IMAGE=busybox:latest
+#Remote port for connection to backend image (you should never change this, unless you know what you are doing, as this parameter is hardcoded in the entrypoint)
+REMOTE_PORT=1
+##Advanced configuration - LOCAL ORCHESTRATOR
+#Local orchestration engine mount port for backend. If you want to start multiple docker backends on the same machine you will need to set the port to \$RANDOM_PORT in order for the different containers not to clash. This will add also the port to EXT_DOMAIN_NAME and properly update all the urls
+LOCAL_INT_IPPORT=0.0.0.0:\$RANDOM_PORT
+#If set to true, it will setup a proxy into the local frontend to the backend ports. This is useful to have a local frontend installation. 
+LOCAL_INT_F_PROXY=false
+#Local orchestrator minimum and maximum values for generated random port. Unless you are using the LOCAL_INT_F_PROXY parameter, you will need to enable your firewall access to these ports.
+LOCAL_RANDOMPORT_MIN=20000
+LOCAL_RANDOMPORT_MAX=40000
+##Advanced configuration - KUBERNETES ORCHESTRATOR
+#Kubernetes namespace to deploy to
+KUBERNETES_NAMESPACE=localcoda

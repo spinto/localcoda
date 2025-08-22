@@ -1,0 +1,30 @@
+{
+  "title": "Manage scenarios",
+  "description": "Add/edit or remove scenarios and tutorials.",
+  "group": "developer",
+  "details": {
+    "intro": {
+      "text": "00-intro.md",
+      "title": "Intro",
+			"background": "initialize.sh"
+    },
+    "steps": [
+      {
+        "text": "01-add.md",
+        "title": "Create scenarios"
+      },
+      {
+        "text": "02-organize.md",
+        "title": "Organize scenarios"
+      },
+      {
+        "text": "03-remove.md",
+        "title": "Remove scenarios"
+      }
+    ]
+  },
+  "backend": {
+    "imageid": "ubuntu",
+    "mountmode": "rw"
+  }
+}

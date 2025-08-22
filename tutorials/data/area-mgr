@@ -1,0 +1,121 @@
+#!/bin/bash
+#Small wrapper to add an area
+
+function error(){
+  echo "ERROR $2"
+  exit $1
+}
+
+function usage(){
+  echo "Small wrapper to manage areas
+
+Usage: area_mgr <command> [<args>]
+
+Where <command> is one of the following commands (with <args> as optional command arguments):
+  add <area-name>      Add a new area named <area-name>. Fail if area already exists
+  set <area-name> <key1>=<value1> [<key2>=<value2> [...]]
+                       Set the <key>=<value> parameter for the area
+  unset <area-name> <key1> [<key2> [...]]
+                       Unset the <key> parameter for the area
+  ls [<area-name>]     Display configured areas and their parameters
+  del <area-name>      Delete area. This requires area contents to be empty.
+  restore-backup       Restore previous backup (if you have errors in localcoda after run)
+"
+  exit 0
+}
+
+[[ -z "$1" ]] && usage
+
+#Check if you are in the correct directory
+s="$PWD/structure.json"
+[[ -f "$s" ]] || error 11 "$s not found! You need to run this script from the areas folder."
+
+#Parse input parameters
+cmd="$1"
+a="$2"
+[[ -z "$a" && "$cmd" != "restore-backup" && "$cmd" != "ls" ]] && error 12 "area name is required. See usage"
+
+#Do the job
+if [[ "$cmd" == "add" ]]; then
+  #Create a new area
+  [[ -d "$a" ]] && error 33 "area $a already exists!"
+  #Check area name is proper
+  [[ "$a" =~ ^[a-zA-Z0-9._-]+$ ]] || error 34 "invalid area name. Areas can contain only [a-zA-Z0-9-_.] characters"
+  #Create area
+  mkdir "$a"
+  [[ "$?" -eq 0 ]] || error 33 "something failed in area folder creation. you may want to check your localcoda instance to see if all is still well..."
+  #Update JSON
+  jq "if any(.items[]; .path == \"$a\") then . else .items += [{ \"path\": \"$a\" }] end" $s > $s.new && mv $s $s.bak && mv $s.new $s
+  [[ "$?" -eq 0 ]] || error 33 "something failed in area $s update. you may want to check your localcoda instance to see if all is still well..."
+  echo "Area $a created successfully"
+elif [[ "$cmd" == "set" ]]; then
+  #Check if area exists
+  [[ "`jq "any(.items[]; .path == \\\"$a\\\")" $s`" == "true" ]] || error 33 "area $a does not exist. Create it first!"
+  #Set area values
+  shift 2
+  ts=""
+  for i in "$@"; do
+    k="${i%%=*}"
+    v="${i#*=}"
+    case $k in
+      title) ;;
+      description) ;;
+      img) ;;
+      theme) ;;
+      group) ;;
+      *) error 45 "parameter $k is not known!" ;;
+    esac
+    ts="$ts,\"$k\":\"${v//\"/\\\"}\""
+  done
+  ts="${ts#,}"
+  [[ -z "$ts" ]] && error 44 "No parameters set!"
+  echo "Setting $ts"
+  jq "(.items |= map( if .path == \"$a\" then . + { $ts } else . end ))" $s > $s.new && mv $s $s.bak && mv $s.new $s
+  [[ "$?" -eq 0 ]] || error 33 "something failed in area $s update. you may want to check your localcoda instance to see if all is still well..."
+  echo "Parameters set successfully"
+elif [[ "$cmd" == "unset" ]]; then
+  #Check if area exists
+  [[ "`jq "any(.items[]; .path == \\\"$a\\\")" $s`" == "true" ]] || error 33 "area $a does not exist. Create it first!"
+  #Set area values
+  cp $s $s.bak
+  shift 2
+  for k in "$@"; do
+    case $k in
+      title) ;;
+      description) ;;
+      img) ;;
+      theme) ;;
+      group) ;;
+      *) error 45 "parameter $k is not known!" ;;
+    esac
+    echo "Unsetting parameter $k..."
+    jq "(.items |= map( if .path == \"$a\" then del(.\"$k\") else . end ))" $s > $s.new && mv $s.new $s
+    [[ "$?" -eq 0 ]] || error 33 "something failed in area $s update. you may want to check your localcoda instance to see if all is still well..."
+  done
+  echo "Parameters unset successfully"
+elif [[ "$cmd" == "ls" ]]; then
+  if [[ -z "$a" ]]; then
+    jq ".items[].path" $s
+  else
+    jq ".items[] | select(.path == \"$a\")" $s
+  fi
+elif [[ "$cmd" == "del" ]]; then
+  #Check if area exists and is empty
+  [[ -z "$(ls -A "$a")"  ]] || error 32 "cannot remove non-empty area. First remove the contents of the $a folder."
+  rmdir "$a"
+  [[ "$?" -eq 0 ]] || error 65 "failed to remove $a directory. Maybe it does not exist or it is not empty."
+  jq ".items |= map(select(.path != \"$a\"))" $s > $s.new && mv $s $s.bak && mv $s.new $s
+  [[ "$?" -eq 0 ]] || error 33 "something failed in area $s update. you may want to check your localcoda instance to see if all is still well..."
+  echo "Area $a deleted successfully"
+elif [[ "$cmd" == "restore-backup" ]]; then
+  #Check if backup exists
+  [[ -f "$s.bak" ]] || error 36 "backup file does not exist"
+  mv $s.bak $s
+  [[ "$?" -eq 0 ]] || error 34 "failed to restore backup"
+  echo "Backupdvanced.runpath restored successfully"
+else
+  error 21 "Invalid command"
+fi
+
+#All done, exit successfully
+exit 0

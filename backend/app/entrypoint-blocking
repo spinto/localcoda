@@ -1,0 +1,6 @@
+#!/bin/bash
+#Mimic a blocking entrypoint, waiting for the poweroff command to be run. Allows to fake a shutdown.
+/etc/localcoda/entrypoint.sh &
+mkfifo /etc/localcoda/entrypoint-blocking.pause 2>/dev/null
+read < /etc/localcoda/entrypoint-blocking.pause
+exit 0

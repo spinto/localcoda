@@ -1,0 +1,17 @@
+{
+  "title": "Areas",
+  "group": "readonly",
+  "items": [
+    {
+      "path": "admin",
+      "title": "Administration tools",
+      "description": "Manage tutorials, scenarios and your localcoda instance",
+      "img": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><text x='3' y='35' font-size='40' fill='white'>&#9881;</text></svg>",
+      "theme": "black",
+      "group": "admin",
+      "advanced": {
+        "runpath": ""
+      }
+    }
+  ]
+}

@@ -1,0 +1,197 @@
+#!/bin/bash
+#Small wrapper to manage users
+
+function error(){
+  echo "ERROR $2"
+  exit $1
+}
+
+function usage(){
+  echo "Small wrapper to manage users
+
+Usage: user-mgr <command> {user/group} [<args>]
+
+Where <command> is one of the following commands (with <args> as optional command arguments):
+  add {user/group} <name>  Add a new user/group named <name>. Fail if user/group already exists
+  set {user/group} <name> <key1>=<value1> [<key2>=<value2> [...]]
+                   For "user": Set the group=<value> or can_impersonate=true
+                   For "group": Set group policy override: <key1>=<value1>
+  unset {user/group} <name> <key1>=<value1> [<key2>=<value2> [...]]
+                   For "user": Unset the group=<value> or can_impersonate=false
+                   For "group": Uset group policy override: <key1>
+  ls {user/group} [<name>] Display configured {user/group} and their parameters
+  del {user/group} <name>  Delete area. This requires area contents to be empty.
+  restore-backup           Restore previous backup (if you have errors in localcoda after run)
+"
+  exit 0
+}
+
+[[ -z "$1" ]] && usage
+
+#Check if you are in the correct directory
+s="$PWD/users.json"
+[[ -f "$s" ]] || error 11 "$s not found! You need to run this script from the areas folder."
+
+#Parse input parameters
+cmd="$1"
+a="$2"
+n="${3//"/\\"}"
+[[ "$a" != "user" && "$a" != "group" ]] && error 11 "you need to specify an user or a group"
+[[ -z "$n" && "$cmd" != "restore-backup" && "$cmd" != "ls" ]] && error 12 "name is required. See usage"
+
+#Do the job
+if [[ "$cmd" == "add" ]]; then
+  if [[ "$a" == "user" ]]; then
+    #Check if user already exists
+    [[ "`jq ".users | has(\\\"$n\\\")" $s`" == "true" ]] && error 33 "user $n already exists!"
+    #Create a new user
+    jq ".users[\"$n\"] = { \"groups\": [] }" $s > $s.new && mv $s $s.bak && mv $s.new $s
+    [[ "$?" -eq 0 ]] || error 33 "something failed in $s update. you may want to check your localcoda instance to see if all is still well..."
+    echo "User $n created successfully"
+  else
+    #Check if group already exists
+    [[ "`jq ".groups | has(\\\"$n\\\")" $s`" == "true" ]] && error 33 "group $n already exists!"
+    #Create a geoup user
+    jq ".groups[\"$n\"] = { \"overrides\": [] }" $s > $s.new && mv $s $s.bak && mv $s.new $s
+    [[ "$?" -eq 0 ]] || error 33 "something failed in $s update. you may want to check your localcoda instance to see if all is still well..."
+    echo "Group $n created successfully"  
+  fi
+elif [[ "$cmd" == "set" ]]; then
+  if [[ "$a" == "user" ]]; then
+    #Check if user exists
+    [[ "`jq ".users | has(\\\"$n\\\")" $s`" == "true" ]] || error 33 "user $n does not exists! Create it first!"
+    #Set user
+    cp $s $s.bak
+    shift 3
+    ts=""
+    for i in "$@"; do
+      k="${i%%=*}"
+      v="${i#*=}"
+      case $k in
+        group)
+          echo "Adding user $n to group $v..."
+          #Check if group exists
+          [[ "`jq ".groups | has(\\\"$v\\\")" $s`" == "true" ]] || error 33 "group $v does not exist!"
+          jq ".users[\"$n\"].groups += [\"$v\"] | .users[\"$n\"].groups |= unique" $s > $s.new && mv $s.new $s
+          [[ "$?" -eq 0 ]] || error 33 "something failed in $s update. you may want to check your localcoda instance to see if all is still well..."
+          ;;
+        can_impersonate)
+          if [[ "$v" == "true" ]]; then
+            echo "Allowing user $n to impersonate other users..."
+          elif [[ "$v" == "false" ]]; then
+            echo "Removing user $n right to impersonate other users..."
+          else
+            error 33 "Value of the can_impersonate paramter can be only true or false"
+          fi
+          jq ".users[\"$n\"].can_impersonate = \"$v\"" $s > $s.new && mv $s.new $s
+          [[ "$?" -eq 0 ]] || error 33 "something failed in $s update. you may want to check your localcoda instance to see if all is still well..."
+          ;;
+        *) error 45 "parameter $k is not known!" ;;
+      esac
+    done
+  else
+    #Check if group exists
+    [[ "`jq ".groups | has(\\\"$n\\\")" $s`" == "true" ]] || error 33 "group $n does not exist!"
+    #Set group overrided
+    shift 3
+    ts=""
+    for i in "$@"; do
+      k="${i%%=*}"
+      v="${i#*=}"
+      case $k in
+        TUTORIAL_MAX_TIME) ;;
+        TUTORIAL_EXIT_ON_DISCONNECT) ;;
+        MAXIMUM_RUN_PER_USER) ;;
+      *) error 45 "parameter $k is not known!" ;;
+      esac
+      ts="$ts,\"$k\":\"${v//\"/\\\"}\""
+    done
+    ts="${ts#,}"
+    [[ -z "$ts" ]] && error 44 "No parameters set!"
+    echo "Setting $ts"
+    jq ".groups[\"$n\"].overrides += { $ts }" $s > $s.new && mv $s $s.bak && mv $s.new $s
+    [[ "$?" -eq 0 ]] || error 33 "something failed in $s update. you may want to check your localcoda instance to see if all is still well..."
+  fi
+  echo "Parameters set successfully"
+elif [[ "$cmd" == "unset" ]]; then
+  if [[ "$a" == "user" ]]; then
+    #Check if user exists
+    [[ "`jq ".users | has(\\\"$n\\\")" $s`" == "true" ]] || error 33 "user $n does not exists! Create it first!"
+    #Unset user group
+    cp $s $s.bak
+    shift 3
+    ts=""
+    for i in "$@"; do
+      k="${i%%=*}"
+      v="${i#*=}"
+      case $k in
+        group)
+          echo "Removing user $n from group $v..."
+          jq ".users.\"$n\".groups |= map(select(. != \"$v\"))" $s > $s.new && mv $s.new $s
+          [[ "$?" -eq 0 ]] || error 33 "something failed in $s update. you may want to check your localcoda instance to see if all is still well..."
+          ;;
+        can_impersonate)
+          echo "Removing user $n right to impersonate other users..."
+          jq "del(.users.\"$n\".can_impersonate)" $s > $s.new && mv $s.new $s
+          [[ "$?" -eq 0 ]] || error 33 "something failed in $s update. you may want to check your localcoda instance to see if all is still well..."
+          ;;
+        *) error 45 "parameter $k is not known!" ;;
+      esac
+    done
+  else
+    #Check if group exists
+    [[ "`jq ".groups | has(\\\"$n\\\")" $s`" == "true" ]] || error 33 "group $n does not exist!"
+    #Unset group overrides
+    cp $s $s.bak
+    shift 3
+    for k in "$@"; do
+      case $k in
+        TUTORIAL_MAX_TIME) ;;
+        TUTORIAL_EXIT_ON_DISCONNECT) ;;
+        MAXIMUM_RUN_PER_USER) ;;
+        *) error 45 "parameter $k is not known!" ;;
+      esac
+      echo "Unsetting override $k..."
+      jq "del(.groups.\"$n\".overrides.\"$k\")" $s > $s.new && mv $s.new $s
+      [[ "$?" -eq 0 ]] || error 33 "something failed in $s update. you may want to check your localcoda instance to see if all is still well..."
+    done
+    echo "Parameters unset successfully"
+  fi
+elif [[ "$cmd" == "ls" ]]; then
+  if [[ "$a" == "user" ]]; then
+    if [[ -z "$n" ]]; then
+      jq ".users | keys[]" $s
+    else
+      jq ".users | to_entries[] | select(.key == \"$n\") | {(.key): .value}" $s
+    fi
+  else
+    if [[ -z "$n" ]]; then
+      jq ".groups | keys[]" $s
+    else
+      jq ".groups | to_entries[] | select(.key == \"$n\") | {(.key): .value}" $s
+    fi  
+  fi
+elif [[ "$cmd" == "del" ]]; then
+  #Delete a user
+  if [[ "$a" == "user" ]]; then
+    jq "del(.users.\"$n\")" $s > $s.new && mv $s $s.bak && mv $s.new $s
+    [[ "$?" -eq 0 ]] || error 33 "something failed in $s update. you may want to check your localcoda instance to see if all is still well..."
+    echo "User $n deleted!"
+  else
+    jq "del(.groups.\"$n\")" $s > $s.new && mv $s $s.bak && mv $s.new $s
+    [[ "$?" -eq 0 ]] || error 33 "something failed in $s update. you may want to check your localcoda instance to see if all is still well..."
+    echo "Group $n deleted!"
+  fi
+elif [[ "$cmd" == "restore-backup" ]]; then
+  #Check if backup exists
+  [[ -f "$s.bak" ]] || error 36 "backup file does not exist"
+  mv $s.bak $s
+  [[ "$?" -eq 0 ]] || error 34 "failed to restore backup"
+  echo "Backupdvanced.runpath restored successfully"
+else
+  error 21 "Invalid command"
+fi
+
+#All done, exit successfully
+exit 0
+

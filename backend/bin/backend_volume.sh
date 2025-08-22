@@ -95,8 +95,8 @@ if [[ "$COMMAND" == "init" ]]; then
   		[[ $? -ne 0 ]] && error 12 "Failed to copy data into docker volume. Exiting!"
 
     elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
-      check_sw kubectl
-  		check_env KUBERNETES_NAMESPACE KUBERNETES_BACKEND_WWW_CONFIGMAP
+      check_sw kubectl tar
+  		check_env KUBERNETES_NAMESPACE
       #Check if the PVC exists, otherwise create it
       kubectl -n "$KUBERNETES_NAMESPACE" get pvc/$TUTORIALS_VOLUME
       if [[ $? -ne 0 ]]; then
@@ -142,8 +142,10 @@ EOF
 	  	[[ $? -ne 0 ]] && error 3 "Helper pod did not start. Maybe something is wrong with your PVC!"
       #Copy the files
 	  	echo "Copying tutorials files..."
-      kubectl -n "$KUBERNETES_NAMESPACE" cp $TAPPDIR/* localcoda-copy-helper:/dst/
+      cd $TAPPDIR
+      tar -cz * | kubectl -n "$KUBERNETES_NAMESPACE" exec -i localcoda-copy-helper -- tar xzv -C /dst/
       res=$?
+      cd - &>/dev/null
       #Remove the pod
 	    echo "Cleaning up..."
 		  kubectl -n "$KUBERNETES_NAMESPACE" delete pod/localcoda-copy-helper

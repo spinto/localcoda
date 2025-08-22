@@ -204,20 +204,18 @@ else
   FOREGROUND_SCRIPT=""
 fi
 
-cd /root
-ttyd -i /etc/localcoda/ttyd.sock -q -W -b /y /bin/bash $FOREGROUND_SCRIPT </dev/null &>/var/log/localcoda/webshell0.log &
-[[ $? -ne 0 ]] && error 22 "Failed to run ttyd!"
-ttydpid=$!
-
-#The webshell is now ready to accept connection
+#All done. The webshell is now ready to accept connections. Exit correctly
 touch /etc/localcoda/ready
 
+#Start the webshell
 if [[ "$CLOSE_ON_EXIT" == "true" ]]; then
-  #Wait for ttyd to terminate (which will do when all clients are disconnected), then poweroff
-  wait $ttydpid
-  echo "no more ttyd connections. shutting down..."
+  #Wait for the webshell to exit on disconnect, then poweroff
+  ttyd -i /etc/localcoda/ttyd.sock -q -W -b /y /bin/bash $FOREGROUND_SCRIPT </dev/null &>/var/log/localcoda/webshell0.log
   poweroff
+else
+  #Just start the webshell (and replace this process with it
+  exec ttyd -i /etc/localcoda/ttyd.sock -W -b /y /bin/bash $FOREGROUND_SCRIPT </dev/null &>/var/log/localcoda/webshell0.log
 fi
 
-#Exit correctly
+#Exit with success
 exit 0

@@ -4,13 +4,13 @@ FROM ubuntu:24.04
 COPY journalctl systemctl /usr/bin/
 
 #Basic required packages
-RUN apt update && apt-get upgrade -y && DEBIAN_FRONTEND=noninteractive apt-get install -y kmod iproute2 iptables curl wget man vim sudo jq git gawk sed python3 bzip2 xz-utils 7zip zip unzip psmisc && apt clean all && rm -rf /var/lib/apt/lists/*
+RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get upgrade -y && apt-get install -y kmod iproute2 iptables curl wget man vim sudo jq git gawk sed python3 bzip2 xz-utils 7zip zip unzip psmisc && apt-get clean all && rm -rf /var/lib/apt/lists/*
 
 #Nicer shell loggin
 RUN echo "PS1='\\\\[\\\\e]0;\\\\h: \\\\w\\\\a\\\\]\\\\h:\\\\w$ '" >> /root/.bashrc
 
 #Install docker engine
-RUN apt update && DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose && apt clean all && rm -rf /var/lib/apt/lists/*
+RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -y docker.io docker-compose && apt-get clean all && rm -rf /var/lib/apt/lists/*
 
 #Add support for docker and k3s (if you need to install it later)
 #Volumes needed for Docker (cannot use overlay otherwise)
@@ -22,6 +22,6 @@ VOLUME /var/lib/cni
 VOLUME /var/log
 
 #Local-coda specific application installation (blocking entrypoint version)
-RUN apt update && apt-get upgrade -y && DEBIAN_FRONTEND=noninteractive apt-get install -y nginx bash jq && apt clean all && rm -rf /var/lib/apt/lists/* && systemctl disable nginx && curl -L https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 > /usr/bin/ttyd && chmod +x /usr/bin/ttyd && ln -s /etc/localcoda/entrypoint-poweroff /usr/sbin/poweroff
+RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get upgrade -y && apt-get install -y nginx bash jq && apt-get clean all && rm -rf /var/lib/apt/lists/* && systemctl disable nginx && curl -L https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 > /usr/bin/ttyd && chmod +x /usr/bin/ttyd && ln -s /etc/localcoda/entrypoint-poweroff /usr/sbin/poweroff
 COPY localcoda-app /etc/localcoda
 ENTRYPOINT ["/bin/bash","/etc/localcoda/entrypoint-blocking"]

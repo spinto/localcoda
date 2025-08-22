@@ -542,8 +542,10 @@
           md = await response.text();         // Parse JSON data
           //replace traffic ports
           md = md.replace(/{{TRAFFIC_HOST1_([0-9]+?)}}/g,options['ext_proxyhost']);
+          //replace main localcoda link
+          md = md.replace(/{{TRAFFIC_MAINAPP}}/g,options['exit_host']);
           //convert markdown to html
-          md=converter.makeHtml(md);
+          md = converter.makeHtml(md);
           //default actions for inline is copy it
           md = md.replace(/<code[^>]*>(.*?)<\/code>[^<{]/g, '<code class="copy">$1</code>');
           //replace custom markdown codes (code with class)

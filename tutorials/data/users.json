@@ -1,16 +1,27 @@
 {
   "users": {
     "admin": {
-      "groups": [ "admin", "developer", "readonly" ]
+      "groups": [
+        "admin",
+        "developer",
+        "readonly"
+      ],
+      "can_impersonate": "true"
     }
   },
   "groups": {
     "admin": {
       "overrides": {
-        "MAXIMUM_RUN_PER_USER": -1,
-        "TUTORIAL_MAX_TIME": "120",
+        "MAXIMUM_RUN_PER_USER": "-1",
+        "TUTORIAL_MAX_TIME": "-1",
         "TUTORIAL_EXIT_ON_DISCONNECT": "true"
       }
+    },
+    "developer": {
+      "overrides": []
+    },
+    "readonly": {
+      "overrides": []
     }
   }
 }

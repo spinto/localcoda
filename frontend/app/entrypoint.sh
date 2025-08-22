@@ -6,9 +6,6 @@ function error(){
   exit $1
 }
 
-#Create run directories
-mkdir -p /var/log/localcoda
-
 #Start FastCGI wrapper
 nohup fcgiwrap -p /opt/localcoda/cgiwrap.sh -c 3 -s unix:/opt/localcoda/cgiwrap.sock </dev/null 2>&1 | rotatelogs -n 30 /var/log/localcoda/fcgiwrap.log 86400 &
 [[ $? -ne 0 ]] && error 1 "ERROR: failed to start fastcgi wrapper"
@@ -54,8 +51,9 @@ EOF
   echo -n "$!" > /opt/localcoda/oauth2-proxy.pid
 fi
 
-cat <<EOF > /opt/localcoda/nginx.conf
-user `id -u -n`;
+rm -f /opt/localcoda/nginx.conf
+[[ "`id -nu`" == "root" ]] && echo 'user root;' >> /opt/localcoda/nginx.conf
+cat <<EOF >> /opt/localcoda/nginx.conf
 worker_processes auto;
 pid /opt/localcoda/nginx.pid;
 

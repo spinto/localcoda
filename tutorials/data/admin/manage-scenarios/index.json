@@ -1,6 +1,6 @@
 {
-  "title": "Localcoda volume manager",
-  "description": "Add/edit or remove tutorials.",
+  "title": "Manage scenarios",
+  "description": "Add/edit or remove scenarios and tutorials.",
   "group": "developer",
   "details": {
     "intro": {
@@ -11,11 +11,15 @@
     "steps": [
       {
         "text": "01-add.md",
-        "title": "Adding a tutorial"
+        "title": "Create scenarios"
       },
       {
-        "text": "02-remove.md",
-        "title": "Removing a tutorial"
+        "text": "02-organize.md",
+        "title": "Organize scenarios"
+      },
+      {
+        "text": "03-remove.md",
+        "title": "Remove scenarios"
       }
     ]
   },

@@ -1,0 +1,1 @@
+../manage-areas/initialize.sh

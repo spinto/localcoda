@@ -87,15 +87,15 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
     #get info from container
     docker exec $cn /bin/bash -c '[[ -e /etc/localcoda/ready ]]'
     if [[ $? -ne 0 ]]; then
-      rs="starting"
+      rs="false"
     else
-      rs="ready"
+      rs="true"
     fi
     cat << EOF
   $s{
     "id":"`docker inspect $cn --format '{{ index .Config.Labels "instanceid" }}'`",
     "user":"`docker inspect $cn --format '{{ index .Config.Labels "user" }}'`",
-    "status":"$rs",
+    "ready":"$rs",
     "access_url":"`docker inspect $cn --format '{{ index .Config.Labels "readyurl" }}'`",
     "instance_name":"$cn",
     "tutorial_path":"`docker inspect $cn --format '{{ index .Config.Labels "tutorialpath" }}'`",
@@ -111,31 +111,10 @@ elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
   check_sw kubectl
   check_env KUBERNETES_NAMESPACE
 
-  echo "["
-  s=
   KUBECTL_EXTRA_SEL=
   [[ -n "$INSTANCE_USERNAME" ]] && KUBECTL_EXTRA_SEL=",localcoda-user=$INSTANCE_USERNAME"
-  error 3 "todoinoneline"
-	kubectl get pod -n "$KUBERNETES_NAMESPACE" --selector=localcoda-instanceid,job-name$KUBECTL_EXTRA_SEL -o jsonpath='{range .items[*]}{.metadata.labels.job-name}{" "}{.status.conditions[?(@.type=="Ready")].status}{" "}{.metadata.annotations.readyurl}{" "}{.metadata.labels.localcoda-instanceid}{" \""}{.metadata.labels.localcoda-user}{"\" }{.metadata.labels.localcoda-tutorialpath}{\n"}{end}' | grep ^$EXECUTION_NAME | while read cn rs ru iid un pt; do
-    #get info from container
-    if [[ "$rs" != "True" ]]; then
-      rs="starting"
-    else
-      rs="ready"
-    fi
-    cat << EOF
-  $s{
-    "id":"$iid",
-    "user":$un,
-    "status":"$rs",
-    "access_url":"$ur",
-    "instance_name":"$cn",
-    "tutorial_path":"$pt"
-  }
-EOF
-    [[ -z "$s" ]] && s=,
-  done
-  echo "]"
+  kubectl get pod -n "$KUBERNETES_NAMESPACE" --selector=localcoda-instanceid,job-name$KUBECTL_EXTRA_SEL -o jsonpath='{"["}{range .items[*]}{"{\"id\":\""}{.metadata.labels.localcoda-instanceid}{"\",\"user\":\""}{.metadata.labels.localcoda-user}{"\",\"ready\":\""}{.status.containerStatuses[*].ready}{"\",\"access_url\":\""}{.metadata.annotations.readyurl}{"\",\"instance_name\":\"job/"}{.metadata.labels.job-name}{"\",\"tutorial_path\":\""}{.metadata.annotations.tutorialpath}{"\",\"start_time\":\""}{.metadata.annotations.starttime}{"\",\"max_time\":\""}{.metadata.annotations.maxtime}{"\"},"}{end}{"]"}' | sed 's/,]$/]/'
+  [[ $? -ne 0 ]] && error 44 "Failed to run kubernetes get pod"
 
 else
   error 2 "Orchestration engine is invalid!"

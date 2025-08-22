@@ -1,1 +1,3 @@
 data/users.htpasswd
+data/scenario-examples
+data/*.bak

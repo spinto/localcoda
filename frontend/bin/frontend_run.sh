@@ -126,7 +126,7 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
     fi
     eval EXT_FT_MAINHOST=$EXT_FT_MAINHOST_SCHEME
     echo "Your frontend has started and should be accessible from:
-    http://$EXT_FT_MAINHOST/"
+    $EXT_PROTO://$EXT_FT_MAINHOST/"
   fi
 
 elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
@@ -140,15 +140,72 @@ elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
   kubectl -n "$KUBERNETES_NAMESPACE" get pvc $TUTORIALS_VOLUME >/dev/null
   [[ $? -ne 0 ]] && error 33 "$TUTORIALS_VOLUME does not exit. Please run backend initialization script in backend/bin/backend_init.sh."
 
+  #Get frontend path
+  if [[ "$EXT_DOMAIN_NAME" =~ NIP_ADDRESS ]]; then
+    error 35 "You cannot have NIP_ADDRESS in the EXT_DOMAIN_NAME for the Kubernetes orchestrator, as to calculate this address I need the IP of the Load balancer for the Kubernetes cluster. Find this IP, detemine the related address from nip.io and modify the EXT_DOMAIN_NAME accordingly, or otherwise put a custom DNS name matching your Kubernetes Load Balancer IP"
+  fi
+  eval EXT_FT_MAINHOST=$EXT_FT_MAINHOST_SCHEME
+
   #Deploy service
   {
+    #Backend configuration
+    kubectl create -n "$KUBERNETES_NAMESPACE" configmap $FRONTEND_NAME-cfg --from-file="$APPDIR/../backend/cfg" --dry-run=client -o yaml
+    #Enable auth2 proxy authentication
+    if [[ -n "$OAUTH2_PROXY_CONF" ]]; then
+      [[ -f "$OAUTH2_PROXY_CONF" ]] || error 33 "Oauth proxy configuration does not exists"
+      echo "---"
+      kubectl create -n "$KUBERNETES_NAMESPACE" secret generic $FRONTEND_NAME-oauth2-secret --from-file="oauth2-proxy.cfg.base=$OAUTH2_PROXY_CONF" --dry-run=client -o yaml
+    fi
     cat << EOF
+---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: $FRONTEND_NAME-sva
+  namespace: $KUBERNETES_NAMESPACE
+---
+# Role with required permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: $FRONTEND_NAME-role
+  namespace: $KUBERNETES_NAMESPACE
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "watch", "delete", "patch", "update"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["create", "get", "list", "watch", "delete", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["create", "get", "list", "watch", "delete", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "get", "list", "watch", "delete", "patch", "update"]
+---
+# Bind the role to the service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: $FRONTEND_NAME-binding
+  namespace: $KUBERNETES_NAMESPACE
+subjects:
+  - kind: ServiceAccount
+    name: $FRONTEND_NAME-sva
+    namespace: $KUBERNETES_NAMESPACE
+roleRef:
+  kind: Role
+  name: $FRONTEND_NAME-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: $EXECUTION_NAME
+  name: $FRONTEND_NAME
   labels:
     localcoda: "frontend"
+  namespace: $KUBERNETES_NAMESPACE
 spec:
   replicas: $KUBERNETES_FRONTEND_REPLICAS
   selector:
@@ -158,7 +215,9 @@ spec:
     metadata:
       labels:
         localcoda: "frontend"
+      namespace: $KUBERNETES_NAMESPACE
     spec:
+      serviceAccountName: $FRONTEND_NAME-sva
       containers:
       - name: app
         image: $IMAGE_TORUN
@@ -167,21 +226,33 @@ spec:
         volumeMounts:
         - mountPath: /data/tutorials
           name: tutorials-path
-        - mountPath: /opt/localcoda/cfg
+        - mountPath: /opt/localcoda/backend/cfg
           name: cfg-path
           readOnly: true
+EOF
+      [[ -n "$OAUTH2_PROXY_CONF" ]] && echo '        - mountPath: /opt/localcoda/oauth2-proxy.cfg.base
+          name: oauth2-path
+          subPath: oauth2-proxy.cfg.base
+          readOnly: true'
+      cat <<EOF
       volumes:
       - name: tutorials-path
         persistentVolumeClaim:
           claimName: $TUTORIALS_VOLUME
       - name: cfg-path
         configMap:
-          name: $EXECUTION_NAME-cfg
+          name: $FRONTEND_NAME-cfg
+EOF
+      [[ -n "$OAUTH2_PROXY_CONF" ]] && echo "      - name: oauth2-path
+        secret:
+          secretName: $FRONTEND_NAME-oauth2-secret"
+      cat << EOF
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: $EXECUTION_NAME
+  name: $FRONTEND_NAME
+  namespace: $KUBERNETES_NAMESPACE
 spec:
   selector:
     localcoda: "frontend"
@@ -193,35 +264,33 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: $EXECUTION_NAME
+  name: $FRONTEND_NAME
+  namespace: $KUBERNETES_NAMESPACE
 spec:
   ingressClassName: nginx
   rules:
-  - host: "$EXT_MAINHOST"
+  - host: "$EXT_FT_MAINHOST"
     http:
       paths:
       - pathType: Prefix
-        path: "$EXT_BASEPATH"
+        path: "/"
         backend:
           service:
-            name: $EXECUTION_NAME
+            name: $FRONTEND_NAME
             port:
               number: 80
----
 EOF
-    kubectl create -n "$KUBERNETES_NAMESPACE" configmap $EXECUTION_NAME-cfg --from-file="$APPDIR/cfg" --dry-run -o yaml
   } | kubectl -n "$KUBERNETES_NAMESPACE" apply -f -
   [[ $? -ne 0 ]] && error 54 "Failed to start backend pod"
 
   #Wait for pod to be ready (if requested)
-  echo "Waiting for $EXECUTION_NAME to start..."
-  kubectl -n "$KUBERNETES_NAMESPACE" rollout status deployment/$EXECUTION_NAME --timeout=60s
+  echo "Waiting for $FRONTEND_NAME to start..."
+  kubectl -n "$KUBERNETES_NAMESPACE" rollout status deployment/$FRONTEND_NAME --timeout=60s
+  [[ $? -ne 0 ]] && error 54 "Frontend did not start in 60 seconds. Something is wrong..."
 
   #Tutorial is started
-  echo "Your tutorial is ready and accessible from:
-    http://$EXT_MAINHOST$INT_BASEPATH 
-
-NOTE: Do not forget to enable HTTPs and user support by following the instructions in the README file."
+  echo "Your frontend has started and is accessible from:
+    $EXT_PROTO://$EXT_FT_MAINHOST/"
 
 fi
 

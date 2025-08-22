@@ -234,7 +234,7 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
   #Determine the tutorials mount points
   if [[ "${TUTORIAL_DIR:0:1}" == "/" ]]; then
     #This is a local bind mount
-	  DOCKER_RUN_ARGS="--mount type=bind,src=$TUTORIAL_DIR,dst=/etc/localcoda/tutorial,$BACKEND_T_MODE"
+	  DOCKER_RUN_ARGS="-v $TUTORIAL_DIR:/etc/localcoda/tutorial:$BACKEND_T_MODE"
 	else
     #This is a volume mount, with an optional sub dir
 		DOCKER_RUN_ARGS="--mount type=volume,src=$TUTORIALS_VOLUME,dst=/etc/localcoda/tutorial,$BACKEND_T_MODE,volume-subpath=$TUTORIAL_DIR"
@@ -313,7 +313,7 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
 
     #Tutorial is started
     log "Your tutorial is ready and accessible from:"
-    echo "$EXT_PROTO://$EXT_MAINHOST$INT_BASEPATH"
+    echo "$READY_URL"
   else
     log "Your tutorial is starting. You can check its status with ./backend_ls.sh"
     echo $LOCAL_UUID
@@ -340,32 +340,28 @@ metadata:
   name: $EXECUTION_NAME
   labels:
     localcoda-instanceid: "$LOCAL_UUID"
-EOF
-    [[ -n "$INSTANCE_USERNAME" ]] && echo "    localcoda-user: \"$INSTANCE_USERNAME\""
-    cat <<EOF
+    localcoda-user: "$INSTANCE_USERNAME"
 spec:
   completions: 1
   parallelism: 1
   backoffLimit: 0
   ttlSecondsAfterFinished: 0
 EOF
-  [[ "$TUTORIAL_MAX_TIME" -ne -1 ]] && echo "activeDeadlineSeconds: $TUTORIAL_MAX_TIME"
-  cat << EOF
+    [[ "$TUTORIAL_MAX_TIME" -ne -1 ]] && echo "  activeDeadlineSeconds: $TUTORIAL_MAX_TIME"
+    cat << EOF
   template:  
     metadata:
+      labels:
+        localcoda-instanceid: "$LOCAL_UUID"
+        localcoda-user: "$INSTANCE_USERNAME"
       annotations:
-        readyurl: "$EXT_PROTO://$EXT_MAINHOST$INT_BASEPATH"
+        readyurl: "$READY_URL"
         tutorialpath: "${TUTORIAL_DIR%/}/$INDEX_FILE"
         maxtime: "$TUTORIAL_MAX_TIME"
         starttime: "`date -u +%s`"
 EOF
     [[ $VIRT_ENGINE == "sysbox" ]] && echo "        io.kubernetes.cri-o.userns-mode: \"auto:size=65536\"
     runtimeClassName: sysbox-runc"
-    cat << EOF
-      labels:
-        localcoda-instanceid: "$LOCAL_UUID"
-EOF
-    [[ -n "$INSTANCE_USERNAME" ]] && echo "        localcoda-user: \"$INSTANCE_USERNAME\""
     cat <<EOF
     spec:
       hostname: $IMAGE_HOSTNAME
@@ -380,7 +376,7 @@ EOF
     cat <<EOF
         env:
         - name: LOCALCODA_OPTIONS
-          value: "$INDEX_FILE,$INT_BASEPATH,$EXT_PROTO,$EXT_MAINHOST,$EXT_PROXYHOST,$TUTORIAL_MAX_TIME,$TUTORIAL_EXIT_ON_DISCONNECT"
+          value: "$INDEX_FILE,$EXT_PROTO,$EXT_EXITHOST,$EXT_MAINHOST,$EXT_PROXYHOST,$TUTORIAL_MAX_TIME,$TUTORIAL_EXIT_ON_DISCONNECT"
         ports:
         - containerPort: 1
         volumeMounts:
@@ -388,7 +384,7 @@ EOF
           name: tutorials-path
           subPath: $TUTORIAL_DIR
 EOF
-    [[ "$BACKEND_T_MODE" == "ro" ]] && echo "         readOnly: true"
+    [[ "$BACKEND_T_MODE" == "ro" ]] && echo "          readOnly: true"
     cat <<EOF
         startupProbe:
           exec:
@@ -435,7 +431,7 @@ spec:
     http:
       paths:
       - pathType: Prefix
-        path: "$INT_BASEPATH"
+        path: "/"
         backend:
           service:
             name: $EXECUTION_NAME
@@ -470,11 +466,11 @@ spec:
             port:
               number: 80
 EOF
-  } | kubectl -n "$KUBERNETES_NAMESPACE" apply -f -
+  } | kubectl -n "$KUBERNETES_NAMESPACE" apply -f - >&2
   [[ $? -ne 0 ]] && error 54 "Failed to start backend pod"
 
   #Patch service to make them be deleted once the pod is deleted
-  cat <<EOF | kubectl patch service/$EXECUTION_NAME ingress/$EXECUTION_NAME-app ingress/$EXECUTION_NAME-proxy --patch-file=/dev/stdin
+  cat <<EOF | kubectl patch -n "$KUBERNETES_NAMESPACE" service/$EXECUTION_NAME ingress/$EXECUTION_NAME-app ingress/$EXECUTION_NAME-proxy --patch-file=/dev/stdin >&2
 metadata:
   ownerReferences:
   - apiVersion: batch/v1
@@ -486,15 +482,15 @@ EOF
 
   #Wait for pod to be ready (if requested)
   if $WAIT_FOR_START; then
-    echo "Waiting for $EXECUTION_NAME to start..."
-    kubectl -n "$KUBERNETES_NAMESPACE" wait --for=condition=Ready pod -l job-name=$EXECUTION_NAME --timeout=60s
+    log "Waiting for $EXECUTION_NAME to start..."
+    kubectl -n "$KUBERNETES_NAMESPACE" wait --for=condition=Ready pod -l job-name=$EXECUTION_NAME --timeout=60s >&2
 
     #Tutorial is started
     log "Your tutorial is ready and accessible from:"
-    echo "$EXT_PROTO://$EXT_MAINHOST$INT_BASEPATH"
+    echo "$READY_URL"
   else
     log "Your tutorial is starting. You can check its status with ./backend_ls.sh"
-    echo $LOCAL_UUID
+    echo "$LOCAL_UUID"
   fi
 
 fi

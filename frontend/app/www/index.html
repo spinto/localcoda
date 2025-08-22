@@ -324,9 +324,9 @@
           gridTheme=i['theme']
         } else {
           if (i['type']=='scenario') {
-            gridTheme='grey';
-          } else {
             gridTheme='grey-dark';
+          } else {
+            gridTheme='grey';
           }
         }
         if ('img' in i) {
@@ -408,7 +408,11 @@
 
         // Status
         td = document.createElement("td");
-        td.textContent = item.status;
+        if(item.ready=="true"){
+          td.textContent = "ready";
+        }else{
+          td.textContent = "starting/stopping";
+        }
         row.appendChild(td);
 
         // User
@@ -442,6 +446,8 @@
         rt=rt+minutes.toString()+' min';
         if(item['max_time']==-1){
           rt=rt+' elapsed';
+        }else{
+          rt=rt+' remaining';
         }
         td = document.createElement("td");
         td.textContent = rt;
@@ -451,7 +457,7 @@
         td = document.createElement("td");
         td.classList.add("actions");
 
-        if (item.status=="ready") {
+        if (item.ready=="true") {
           const terminalLink = document.createElement("a");
           terminalLink.href = item.access_url;
           terminalLink.target = "_blank";
@@ -499,12 +505,15 @@
       for (let run_timeout=120; run_timeout>0; run_timeout=run_timeout-1) {
         run = await ctlFetch('ls/'+instance.uuid);
         if(run == null) return;
-        if (run[0]['status']=='ready') break;
+        if (run[0]['ready']=='true') break;
 
         //Sleep for one second
         await new Promise(r => setTimeout(r, 1000));
       }
-      if (run[0]['status']=='ready') {
+      if (run[0]['ready']=='true') {
+        //Wait still some time for the ingresses and nginx proxies to settle
+        await new Promise(r => setTimeout(r, 500));
+        //Redisrect user to the actual scenario
         window.location=run[0]['access_url']
       } else {
         dError("Timeout reached while trying to start scenario.");

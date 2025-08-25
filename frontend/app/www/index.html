@@ -465,7 +465,7 @@
 
         // Scenario
         td = document.createElement("td");
-        scenarioPath=item.tutorial_path.substring(1).replace(/\/index\.json$/, "");
+        scenarioPath=item.tutorial_path.replace(/^\//,"").replace(/\/index\.json$/, "");
         scenariolink = document.createElement("a");
         scenariolink.href = "#browse/"+scenarioPath.replace(/[^/]*?$/, "");
         scenariolink.textContent = scenarioPath;

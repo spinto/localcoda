@@ -415,6 +415,18 @@ EOF
             memory: "$IMAGE_MEMORY_LIMIT"
             cpu: "$IMAGE_CPU_LIMIT"
       restartPolicy: Never
+EOF
+    if [[ -n "$KUBERNETES_BK_DNS" ]]; then
+      cat << EOF
+      dnsPolicy: "None"
+      dnsConfig:
+        nameservers:
+EOF
+      for dnses in ${KUBERNETES_BK_DNS//,/ }; do
+        echo "        - $dnses"
+      done
+    fi
+    cat << EOF
       volumes:
       - name: tutorials-path
         persistentVolumeClaim:

@@ -59,6 +59,9 @@ Options:
   -d | --nowait  do not wait for the backend to be ready before closing the app. The script
                  will release once the backend is started, and you can check its status via
                  the backend_ls command
+  -Ldev          enable development mode. This will directly mount in read/write the frontend directories from
+                 this repository instead of the ones in the image. Only for development and only
+                 for local orchestrator.
 :usage
   exit 1
 }
@@ -69,6 +72,7 @@ LOCAL_UUID=
 WAIT_FOR_START=true
 INSTANCE_USERNAME=
 LOGLEVEL=1
+LOCAL_DEV_MODE=false
 [[ -z "$*" ]] && usage
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
@@ -78,6 +82,7 @@ while [[ "$#" -gt 0 ]]; do
    -d | --nowait) WAIT_FOR_START=false; shift 1 ;;
    -v) LOGLEVEL=$(( LOGLEVEL + 1 )); shift 1;;
    -q) LOGLEVEL=$(( LOGLEVEL - 1 )); shift 1;;
+   -Ldev) LOCAL_DEV_MODE=true; shift 1;;
    -h | --help) usage ;;
    *) if [[ -z "$TUTORIAL_DIR" ]]; then
 	      TUTORIAL_DIR="${1%/}"
@@ -287,6 +292,12 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
     PORT="PORT"
     eval EXT_PROXYHOST=$EXT_BK_PROXYHOST_SCHEME
     READY_URL="$EXT_PROTO://$EXT_MAINHOST/"
+  fi
+
+  #Check local development mode
+  if [[ "$LOCAL_DEV_MODE" == "true" ]]; then
+    #Mount the www folder from disk
+    DOCKER_RUN_ARGS="$DOCKER_RUN_ARGS -v $APPDIR/app/www:/etc/localcoda/www:ro"
   fi
 
   #Start the container in the background

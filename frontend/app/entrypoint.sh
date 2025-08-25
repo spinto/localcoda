@@ -9,7 +9,7 @@ function error(){
 #Start FastCGI wrapper
 nohup fcgiwrap -p /opt/localcoda/cgiwrap.sh -c 3 -s unix:/opt/localcoda/cgiwrap.sock </dev/null 2>&1 | rotatelogs -n 30 /var/log/localcoda/fcgiwrap.log 86400 &
 [[ $? -ne 0 ]] && error 1 "ERROR: failed to start fastcgi wrapper"
-echo -n "$!" > /opt/localcoda/cgiwrap.pid
+echo -n "$!" > /opt/localcoda/fcgiwrap.pid
 
 #Create nginx configuration
 SWDIR="${BASH_SOURCE[0]}"

@@ -222,6 +222,16 @@ EOF
           subPath: oauth2-proxy.cfg.base
           readOnly: true'
       cat <<EOF
+       livenessProbe:
+          exec:
+            command: ["/opt/localcoda/healthprobe"]
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          failureThreshold: 3
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/opt/localcoda/poweroff"]
       volumes:
       - name: tutorials-path
         persistentVolumeClaim:

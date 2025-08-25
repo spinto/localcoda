@@ -1,0 +1,21 @@
+#!/bin/bash
+#Healthness probe
+
+function error(){
+  echo "$2"
+  exit $1
+}
+
+#Check presence of nginx
+ps -p `cat /opt/localcoda/nginx.pid` &>/dev/null || error 1 "Nginx not running!"
+
+#Check presence of fcgiwrap
+ps -p `cat /opt/localcoda/fcgiwrap.pid` &>/dev/null || error 2 "FCGI wrapper not running!"
+
+#Check presence of oauth2-proxy (if needed)
+if [[ -f /opt/localcoda/oauth2-proxy.pid ]]; then
+  ps -p `cat /opt/localcoda/oauth2-proxy.pid` &>/dev/null error 3 "Oauth2 wrapper not running! Check if your OAuth2 configuration is correct!"
+fi
+
+#All checks ok
+exit 0

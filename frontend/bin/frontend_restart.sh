@@ -61,6 +61,7 @@ echo "Restarting frontend..."
 check_env ORCHESTRATION_ENGINE FRONTEND_NAME
 if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
   check_sw docker
+  docker exec $FRONTEND_NAME /opt/localcoda/poweroff
   docker stop $FRONTEND_NAME
   docker start $FRONTEND_NAME
   exit $?

@@ -1,0 +1,5 @@
+#!/bin/bash
+#Script to poweroff application
+
+#Terminate Nginx gracefully, all the rest will be stopped brutally after
+nginx -c /opt/localcoda/nginx.conf -s quit

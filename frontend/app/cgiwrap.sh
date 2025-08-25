@@ -50,15 +50,14 @@ def get_user_info(level=0):
   def luf(_cache=None):
     if _cache is None:
       #Load users file (if present)
-      cf=os.environ['TUTORIALS_VOLUME_ACCESS_MOUNT']+os.sep+'users.json'
-      if os.path.isfile(cf):
-        try:
-          with open(cf,"r", encoding="utf-8") as f:
-            _cache=json.load(f)
-        except json.JSONDecodeError as e:
-          perror(500,f"Invalid user file: {e}")
-        except OSError as e:
-          perror(500,f"Cannot read file. {e}")
+      try:
+        cf=os.environ['TUTORIALS_VOLUME_ACCESS_MOUNT']+os.sep+'users.json'
+        with open(cf,"r", encoding="utf-8") as f:
+          _cache=json.load(f)
+      except json.JSONDecodeError as e:
+        perror(500,f"Invalid user file: {e}")
+      except OSError as e:
+        perror(500,f"Cannot read file. {e}")
     return _cache
 
   #Returns None if the user authentication is disabled (all users will be able to access)

@@ -54,6 +54,18 @@ You can do that by changing the default configuration of your Kubernetes cluster
 
 Once you have configured your reverse proxy or ingress, you need to change the `EXT_PROTO` variable in the `backend/cfg/conf` file, set it to `https` and re-deploy your localcoda instance. This way localcoda will know it needs to redirect you to HTTPS.
 
+## Isolate internal pod network
+
+In a production environment, on Kubernetes, you way want to isolate the pods running in the localcoda namespace, so that users running a tutorial cannot use it to connect to you internal Kubernetes network services or to other tutorials or use the internal Kubernetes DNS to find the IDs of other users tutorials.
+
+Once you isolate the localcoda backend pods, they will be able only to connect to the internet, which will mean they will be also kicked out from the internal Kubernetes DNS. For this reason, before isolating the localcoda backend pod network, you should edit the `backend/cfg/conf` file and set the `KUBERNETES_BK_DNS` variable to DNS servers outside of the Kubernetes cluster (e.g. your organization DNSes or public IP DNSes). NOTE: You need then to apply the new configuration by running again the `frontend/bin/frontend_run.sh`.
+
+Now, to isolate your pod network, you can apply the sample kubernetes configuration in `frontend/cfg/isolate-namespace-pods.yaml`. Before doing so, ensure the CIDR in the `frontend/cfg/isolate-namespace-pods.yaml` (`except` rule) matches the CIDR of your internal kubernetes network, then deploy it via
+
+```
+kubectl apply -n localcoda -f frontend/cfg/isolate-namespace-pods.yaml
+```
+
 ## Run using sysbox
 
 The default docker virtualization engine configured in the `backend/cfg/conf` is Docker. Docker capabilities are limited, in particular it does not allow to have containers with systemd and requires admin privileges to be given to the container to run docker-in-docker. Thus, not all the tutorials can run on the docker virtualization engine, but only the one that do not make a big use of systemd.

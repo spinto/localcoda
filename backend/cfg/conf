@@ -46,3 +46,6 @@ LOCAL_RANDOMPORT_MAX=40000
 ##Advanced configuration - KUBERNETES ORCHESTRATOR
 #Kubernetes namespace to deploy to
 KUBERNETES_NAMESPACE=localcoda
+#Comma-separated nameservers to use for the backend pods. If is suggested for backend pods to use external DNS servers in production. This will ensure, togheter with network isolation, that they cannot connect to any other tutorial pod or any other service in the kubernetes cluster.
+#You should uncomment this line if you are enabling network isolation in your kubernetes cluster
+#KUBERNETES_BK_DNS=8.8.8.8,8.8.4.4

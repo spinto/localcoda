@@ -222,7 +222,7 @@ EOF
           subPath: oauth2-proxy.cfg.base
           readOnly: true'
       cat <<EOF
-       livenessProbe:
+        livenessProbe:
           exec:
             command: ["/opt/localcoda/healthprobe"]
           initialDelaySeconds: 5

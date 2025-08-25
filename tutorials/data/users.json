@@ -1,0 +1,30 @@
+{
+  "users": {
+    "admin": {
+      "groups": [
+        "admin",
+        "developer",
+        "readonly"
+      ],
+      "can_impersonate": "true"
+    },
+    "pippo": {
+      "groups": []
+    }
+  },
+  "groups": {
+    "admin": {
+      "overrides": {
+        "MAXIMUM_RUN_PER_USER": "-1",
+        "TUTORIAL_MAX_TIME": "-1",
+        "TUTORIAL_EXIT_ON_DISCONNECT": "true"
+      }
+    },
+    "developer": {
+      "overrides": []
+    },
+    "readonly": {
+      "overrides": []
+    }
+  }
+}

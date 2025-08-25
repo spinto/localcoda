@@ -93,7 +93,7 @@ frontend/bin/frontend_run.sh --auth $PWD/frontend/cfg/oauth2-proxy.htpasswd.cfg
 
 Once executed successfully, you can connect at the listed address and login via with the admin/admin account.
 
-You can then execute the tutorials in the "Admin" are to get information on how to manage users, add scenarios, configure permissions, etc...
+You can then execute the tutorials in the "Admin" area to get information on how to manage users, add scenarios, configure permissions, etc...
 
 ## Configuration
 

@@ -34,7 +34,7 @@ backend/bin/backend_volume.sh init
 
 And you should be now able to access the localcoda instance with your admin account. You can then now follow the "Manage users" tutorial into the "Admin" area to provide access to other users.
 
-NOTE that, the htpasswd is only for development and example. You should use your own OIDC external Identity Provider. For example, if you want to add more users to the htpasswd or if you want to change the admin user password, you need to use the `htpasswd -B users.htpasswd <username>` command inside the users tutorial and then perform a `kubectl rollout restart -n localcoda deployment/localcoda-frontend && kubectl rollout status -n localcoda deployment/localcoda-frontend` to reload the new htpasswd file.
+NOTE that, the htpasswd is only for development and example. You should use your own OIDC external Identity Provider. For example, if you want to add more users to the htpasswd or if you want to change the admin user password, you need to use the `htpasswd -B users.htpasswd <username>` command inside the users tutorial and then perform a `frontend/bin/frontend_restart.sh` command to reload the new htpasswd file.
 
 ## Deploy on your own domain
 

@@ -34,7 +34,7 @@ function usage {
   cat <<:usage
 localcoda frontend stop version $APP_VERSION
 Usage:
-  frontend_stop [options]
+  frontend_restart [options]
 
 Options:
   -h             displays this help page
@@ -57,17 +57,21 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
-echo "Stopping frontend..."
+echo "Restarting frontend..."
 check_env ORCHESTRATION_ENGINE FRONTEND_NAME
 if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
   check_sw docker
   docker stop $FRONTEND_NAME
-  docker rm $FRONTEND_NAME
+  docker start $FRONTEND_NAME
   exit $?
 elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
   check_sw kubectl
 	check_env KUBERNETES_NAMESPACE
-  kubectl delete -n "$KUBERNETES_NAMESPACE" deployment/$FRONTEND_NAME service/$FRONTEND_NAME ingress/$FRONTEND_NAME configmap/$FRONTEND_NAME-cfg
+  kubectl rollout restart -n localcoda deployment/$FRONTEND_NAME
+  [[ $? -ne 0 ]] && error "failed to restart frontend"
+  echo "Waiting frontend to go up again..."
+  kubectl rollout status -n localcoda deployment/$FRONTEND_NAME
+  [[ $? -ne 0 ]] && error "timeout before frontend could go up. Something is wrong..."
   exit $?
 else
 	error 2 "Orchestration engine $ORCHESTRATION_ENGINE is invalid!"

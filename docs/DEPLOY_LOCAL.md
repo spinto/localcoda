@@ -101,8 +101,7 @@ To understand how to manage the server, follow the tutorials in the "Admin" area
 To stop the frontend you can run
 
 ```
-docker stop localcoda-frontend
-docker rm localcoda-frontend
+frontend/bin/frontend_stop.sh
 ```
 
 If you want to stop the running backends, refer to the commands above (for the single-scenario run)

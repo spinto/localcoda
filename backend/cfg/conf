@@ -2,7 +2,7 @@
 #Allowed virtualization engines supported for backend are docker or sysbox. Frontend will always use docker.
 VIRT_ENGINE=docker
 #Allowed orchestration engines supported at the moment are local and kubernetes
-ORCHESTRATION_ENGINE=kubernetes
+ORCHESTRATION_ENGINE=local
 #Default tutorial duration (in seconds). Set to "-1" to disable.
 TUTORIAL_MAX_TIME=-1
 #Exit upon disconnect. If true, terminates the tutorial if client disconnects (e.g. closes browser page).
@@ -12,7 +12,7 @@ MAXIMUM_RUN_PER_USER=-1
 #External domain name. Note that you will need a wildcard DNS entry mapping this external domain name and a wildcard certificate if you are putting https on top, to make this application work. This application will not work with a path-based scheme due to nginx redirect constraints. By using the special \$NIP_ADDRESS variable the backend will generate and use a nip.io address mapped yo the first local external IP. If this does not work, you can use the following configuration instead
 #EXT_DOMAIN_NAME=.localcoda.com
 #and setup your /etc/hosts file or use the chrome --host-resolver-rules="MAP *.localcoda.com <your external IP>" to connect
-EXT_DOMAIN_NAME=-lc.eoepca-sciencehub.esa.int
+EXT_DOMAIN_NAME=.\$NIP_ADDRESS
 #External host protocol (change this only if you have a proxy on front of the application to serve it as https)
 EXT_PROTO=http
 ##Advanced configuration - GENERAL
@@ -20,15 +20,15 @@ EXT_PROTO=http
 IMAGES_DOCKER_MAPFILE=cfg/imagemap.docker
 IMAGES_SYSBOX_MAPFILE=cfg/imagemap.sysbox
 #Scheme to determine the frontend application sub-domain (you should never change this, unless you know what you are doing)
-EXT_FT_MAINHOST_SCHEME="app\$EXT_DOMAIN_NAME"
+EXT_FT_MAINHOST_SCHEME="lc\$EXT_DOMAIN_NAME"
 #Scheme to determine the backend main app sub-domain (you should never change this, unless you know what you are doing)
-EXT_BK_MAINHOST_SCHEME="\$LOCAL_UUID-app\$EXT_DOMAIN_NAME"
+EXT_BK_MAINHOST_SCHEME="\$LOCAL_UUID-lc\$EXT_DOMAIN_NAME"
 #Scheme to determine the scenario proxy application sub-domain for connection to the tutorial (\$PORT will be replaced with the actual port in use, you should never change this, unless you know what you are doing)
-EXT_BK_PROXYHOST_SCHEME="\$PORT-\$LOCAL_UUID-app\$EXT_DOMAIN_NAME"
+EXT_BK_PROXYHOST_SCHEME="\$PORT-\$LOCAL_UUID-lc\$EXT_DOMAIN_NAME"
 #Backend orchestration execution identifier shcheme (you should never change this, unless you know what you are doing)
-EXECUTION_NAME_SCHEME="localcoda-bk-\$LOCAL_UUID"
+EXECUTION_NAME_SCHEME="lc-bk-\$LOCAL_UUID"
 #Tutorials volume/pvc name. If this is a PVC, it is created with ReadWriteMany (you should never change this, unless you know what you are doing)
-TUTORIALS_VOLUME="localcoda-tutorials"
+TUTORIALS_VOLUME="lc-tutorials"
 #Local mount of the tutorials volume. If set, backend will check the volume againist this path, avoiding accessing the volume via specific containers. Note that, if running the backend via the frontend, this parameter is ignored and always set to /data/tutorial , which is the hardocded mount path in the frontend (you should never change this, unless you know what you are doing)
 TUTORIALS_VOLUME_ACCESS_MOUNT=
 #Local volume access image to use. Must be set if TUTORIALS_VOLUME_ACCESS_MOUNT is not set. It is recommended to set TUTORIALS_VOLUME_ACCESS_MOUNT instead of this, otherwise you need to spawn a new container all the time you need to access a tutorial (you should never change this, unless you know what you are doing)

@@ -63,7 +63,7 @@ In a multi-scenario run you will deploy on Kubernetes the localcoda frontend. In
 To stop the frontend you can run
 
 ```
-kubectl delete -l app=localcoda-frontend 
+frontend/bin/frontend_stop.sh
 ```
 
 If you want to stop the running backends, refer to the commands above (for the single-scenario run)

@@ -56,7 +56,7 @@ Options:
   exit 1
 }
 
-FRONTEND_NAME="localcoda-frontend"
+FRONTEND_NAME="lc-frontend"
 KUBERNETES_FRONTEND_REPLICAS=1
 IMAGE_TORUN=spinto/localcoda-frontend:latest
 LOCAL_EXT_IPPORT=0.0.0.0:80

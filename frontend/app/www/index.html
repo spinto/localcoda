@@ -221,7 +221,10 @@
       loadpage();
     }
     function dError(errorText) {
-      document.getElementById('t').textContent = 'ERROR:'+errorText;
+      document.getElementById('t').textContent = 'ERROR: '+errorText;
+    }
+    function dErrorHTML(errorHTML) {
+      document.getElementById('t').innerHTML = errorHTML;
     }
     function loginPage(){
       document.getElementById('p').textContent = 'Forbidden';
@@ -279,7 +282,7 @@
       } else if (cl.startsWith('user')){
         userPage();
       } else {
-        dError("ERROR: Wrong hash!")
+        dError("Wrong hash!")
       }
     }
     async function userPage(){
@@ -346,7 +349,7 @@
     }
     async function loadPageBrowse(cl) {
       if (!cl.startsWith('browse')){
-        dError("ERROR: Wrong start for browse!");
+        dError("Wrong start for browse!");
         return;
       }
       document.getElementById('t').innerHTML="loading directory... please wait...";
@@ -395,10 +398,10 @@
     }
     async function loadPageList(cl) {
       if (cl!='list'){
-        dError("ERROR: Wrong start for list!");
+        dError("Wrong start for list!");
         return;
       }
-      document.getElementById('p').innerHTML="Running scenario instances";
+      document.getElementById('p').innerHTML="Scenario instances";
       document.getElementById('t').innerHTML="listing instances... please wait...";
 
       const data = await ctlFetch('ls');
@@ -527,7 +530,7 @@
     }
     async function runScenario(cl) {
       if (!cl.startsWith('run')){
-        dError("ERROR: Wrong start for run!");
+        dError("Wrong start for run!");
         return;
       }
       document.getElementById('p').innerHTML="Starting scenario...";
@@ -543,36 +546,99 @@
         return
       }
       //Wait till the scenario is ready or till a timeout is reached
+      document.getElementById('p').innerHTML="Starting scenario... Waiting in queue...";
       for (let run_timeout=120; run_timeout>0; run_timeout=run_timeout-1) {
         run = await ctlFetch('ls/'+instance.uuid);
-        if(run == null) return;
+        if(run == null) {
+          dErrorHTML("Failed to get queue status. Try to look for the scenario in the <a href='#list'>Scenarios Page</a>.");
+          return;
+        }
         if (run[0]['ready']=='true') break;
 
         //Sleep for one second
         await new Promise(r => setTimeout(r, 1000));
       }
       if (run[0]['ready']=='true') {
+        //Access url is the address to connect to the scenario
+        const au = run[0]['access_url'];
         //Wait still some time for the ingresses and nginx proxies to settle
-        await new Promise(r => setTimeout(r, 500));
-        //Redisrect user to the actual scenario
-        window.location=run[0]['access_url']
+        document.getElementById('p').innerHTML="Starting scenario... Waiting for scenario startup...";
+        is_accessible=false;
+        for (let run_timeout=30; run_timeout>0; run_timeout=run_timeout-1) {
+
+          try {
+            const r = await fetch(au, { method: 'HEAD', redirect: 'manual' }); // Using HEAD request to avoid downloading the entire content
+            if (r.status === 200 || r.status === 302 || ( 'type' in r && r['type']=="opaqueredirect") ) {
+              is_accessible=true;
+              break;
+            }
+          } catch (error) {
+            //Skip the error as it is expected
+            is_accessible=false;
+          }
+
+          //Sleep for one second
+          await new Promise(r => setTimeout(r, 1000));
+        }
+        if (is_accessible) {
+          //Redirect user to the actual scenario
+          window.location=au;
+        } else {
+          dErrorHTML("Timeout reached while trying to contact scenario.. Try to look for the scenario in the <a href='#list'>Scenarios Page</a>.");
+        }
       } else {
-        dError("Timeout reached while trying to start scenario.");
+        dErrorHTML("Timeout reached while waiting in queue. Check what is the status of the scenario from the <a href='#list'>Scenarios Page</a>.");
+        return;
       }
 
     }
     async function stopScenario(cl) {
-      if (!cl.startsWith('stop')){
-        dError("ERROR: Wrong start for run!");
+      if (!cl.startsWith('stop/')){
+        dError("Wrong start for run!");
         return;
       }
       document.getElementById('p').innerHTML="Stopping scenario...";
       document.getElementById('t').innerHTML="Please wait to be redirected...";
+      //Check if scenario exist and is running
+      cll=cl.replace(/^stop/,'ls');
+      const run = await ctlFetch(cll);
+      if(run == null) {
+        dError("Failed to check scenario existence. Please contact administrator!");
+        return;
+      }
+      if (run.length!=1){
+        dError("Your scenario was already stopped!");
+        return;
+      }
       //Stopping scenario
-      const run = await ctlFetch(cl);
-      if(run == null) return;
-      //Got back to list
-      window.location.hash='list';
+      const stop = await ctlFetch(cl);
+      if(stop == null) { 
+        dError("Failed network request. Please contact administrator!")
+        return;
+      }
+      //Check the scenario is stopped
+      document.getElementById('p').innerHTML="Stopping scenario... Waiting for scenario to shutdown...";
+      let ps = await ctlFetch(cll);
+      for (let run_timeout=120; run_timeout>0; run_timeout=run_timeout-1) {
+        if(ps == null) {
+          dError("Failed to check scenario status. Please contact administrator!");
+          return;
+        }
+        if (ps.length==0) break;
+
+        //Sleep for one second
+        await new Promise(r => setTimeout(r, 1000));
+
+        // Query again
+        ps =await ctlFetch(cll);
+      }
+      if (ps.length==0) {
+        //All ok, get back to list
+        window.location.hash='list';
+      } else {
+         dError("Failed to check scenario status. Please contact administrator!");
+         return;
+      }
     }
   </script>
 </head>

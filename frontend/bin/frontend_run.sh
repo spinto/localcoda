@@ -101,7 +101,7 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
   #Start the container in the background (we need to start this as root to access the docker daemon on the VM)
   echo "Starting frontend..."
   if $LOCAL_DEV_MODE; then
-    echo "Running in local development mode. First thing you should do is to run the entrypoint via './entrypoint &'"
+    echo "Running in local development mode. First thing you should do is to run the entrypoint via './entrypoint.sh &'"
     docker run -u 0 -v /var/run/docker.sock:/var/run/docker.sock --name "$FRONTEND_NAME" $DOCKER_ARGS --network=host -e "LOCAL_EXT_IPPORT=$LOCAL_EXT_IPPORT" -v $APPDIR/app:/opt/app:ro -v $APPDIR/../backend:/backend:ro --rm -it --entrypoint /bin/bash "$IMAGE_TORUN" -c 'cd /opt/localcoda; rm -rf *; ln -s ../app/www ../app/*.sh ./; cp -r ../app/backend ./; ln -s ../../../backend/cfg backend/; exec bash'
     [[ $? -ne 0 ]] && error 1 "Failed to start container"
   else

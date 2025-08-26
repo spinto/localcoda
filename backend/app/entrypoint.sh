@@ -123,6 +123,7 @@ http {
     }
     location / {
       return 302 $EXT_PROTO://$EXT_MAINHOST/w/;
+      add_header Access-Control-Allow-Origin *;
     }
     location = /favicon.ico {
       alias /etc/localcoda/www/favicon.ico;

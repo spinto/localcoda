@@ -161,7 +161,7 @@ if cmd=="browse":
       if 'title' in st_prev:
         st['title']=st_prev['title']
       else:
-        st['title']=el
+        st['title']=el.replace('-',' ').title()
     if 'description' not in st and 'description' in st_prev: st['description']=st_prev['description']
     #Add the path to the path list
     st_path+=[{'title':st['title'],'path':cur_path}]
@@ -170,9 +170,12 @@ if cmd=="browse":
   st['paths']=st_path
   if 'group' in st: del st['group']
 
-  #If you do not have a list of items in the structure, load it
+  #If you do not have a list of items in the structure, add it by scanning the directory for sub-directories
   if 'items' not in st:
-    st['items'] = [{"path": d} for d in next(os.walk(tut_abspath))[1]]
+    #Get the list of directories (sorted)
+    subdirs = sorted(next(os.walk(tut_abspath))[1])
+    st['items'] = [{"path": d} for d in subdirs]
+    del subdirs
 
   #Load scenarios titles and descriptions (if not overwritten)
   new_items=[]
@@ -213,11 +216,16 @@ if cmd=="browse":
         perror(500,f"Cannot read file. {e}")
       if 'title' not in d and 'title' in fv: d['title']=fv['title']
       if 'description' not in d and 'description' in fv: d['description']=fv['description']
+      if 'items' in fv: d['items_count']=len(fv['items'])
     #If we have just sub-directories inside, still this is a structure
     else:
+      #Check if we have subdirectories inside
       d['type']='structure';
+      d['items_count']=len(next(os.walk(tut_abspath+d['path']))[1])
+      #If the sub-directory is empty, then do not show it
+      if d['items_count']==0: continue
     #If still title and description is not set, set it to the name of the folder and to an empty string
-    if 'title' not in d: d['title']=d['path']
+    if 'title' not in d: d['title']=d['path'].replace('-',' ').title()
     if 'description' not in d: d['description']=''
     new_items.append(d)
   st['items']=new_items

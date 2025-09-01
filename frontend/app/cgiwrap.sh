@@ -245,9 +245,6 @@ elif cmd=="run":
   if tut_splitpath_len>100: perror(400, "path too long")
   if tut_splitpath_len<2: perror(400, "path too short")
   if tut_splitpath[tut_splitpath_len-1]=="": del tut_splitpath[tut_splitpath_len-1]
-  tut_scenariopath=tut_splitpath[2] if tut_splitpath_len==3 else ""
-  tut_scenariopath+=os.sep + 'index.json'
-  tut_areaname=tut_splitpath[1]
 
   #Check if the folder exits
   if not os.path.isdir(tut_abspath) or not os.path.isfile(tut_abspath+"index.json"): perror(404, "path not found")
@@ -299,12 +296,14 @@ elif cmd=="run":
   #Check you have permissions to run the scenario also (not all the paths)
   if user_groups is not None and 'group' in sf and sf['group'] not in user_groups: perror(403,f"Access forbidden!")
 
-  #Check the area advanced run parameters
-  if 'advanced' in ar:
-    if 'runpath' in ar['advanced']:
-      tut_areaname=ar['advanced']['runpath']
-      tut_scenariopath=arg+os.sep+'index.json'
-      tut_scenariopath=tut_scenariopath[len(tut_areaname)+1:]
+  #Extract area name and scenario path
+  if 'advanced' in ar and 'runpath' in ar['advanced']:
+    #Advanced parameters rewrite area name
+    tut_areaname=ar['advanced']['runpath']
+  else:
+    tut_areaname=tut_splitpath[1]
+  tut_scenariopath=arg+os.sep+'index.json'
+  tut_scenariopath=tut_scenariopath[len(tut_areaname)+1:]
 
   #Create run command
   cmd=['/bin/bash','/opt/localcoda/backend/bin/backend_run.sh','-o','TUTORIALS_VOLUME_ACCESS_MOUNT=/data/tutorials','-q','-d',tut_areaname,tut_scenariopath]

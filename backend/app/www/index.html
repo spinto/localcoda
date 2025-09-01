@@ -572,7 +572,15 @@
 
     async function loadPage(n) {
       md='';
-      nl=tutorial_index['details']['steps'].length;
+      if (!('details' in tutorial_index)) {
+        document.getElementById('t').textContent = 'Invalid scenario: Missing "details" in index.json.';
+        return;
+      }
+      if ('steps' in tutorial_index['details']) {
+        nl=tutorial_index['details']['steps'].length;
+      } else {
+        nl=0;
+      }
       if(n==-1) {
         if('intro' in tutorial_index['details']){
           page_md_path=tutorial_index['details']['intro']['text'];

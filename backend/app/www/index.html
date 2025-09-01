@@ -175,8 +175,8 @@
       font-size: 1.1rem;
       display: block;
       border: 0;
-      padding-right: 1.5rem !important;
-      padding-left: 1.5rem !important;
+      padding-right: 1.2rem !important;
+      padding-left: 1.2rem !important;
       -webkit-appearance: button;
       text-transform: none;
       font-weight: 400;
@@ -641,7 +641,7 @@
         pagehtml=pagehtml+'<button class="back-button" onclick="loadPage('+(n-1).toString()+')"><span>START</span></button>';
         pagehtml=pagehtml+'<button class="extra-button" onclick="window.location=window.location;"><span>RESTART</span></button>';
         pagehtml=pagehtml+'<button class="extra-button" onclick="window.location=\\"/\\";"><span>SCENARIOS</span></button>';
-        pagehtml=pagehtml+'<button class="extra-button" onclick="contact();"><span>FEEDBACK</span></button>';
+        pagehtml=pagehtml+'<button class="extra-button" onclick="scenarioPoweroff();"><span>POWEROFF</span></button>';
       }
       pagehtml=pagehtml+'</div><div>&nbsp;</div></div></div></span>';
       document.getElementById('t').innerHTML=pagehtml;
@@ -750,8 +750,17 @@ function fallbackCopyText(text) {
   document.body.removeChild(textarea);
 }
 
-function contact(){
-  alert("not implemented");
+function scenarioPoweroff(){
+  //Open a new shell, execute a poweroff
+  setTimeout(()=>{ nt(); },10);
+  setTimeout(()=>{
+    document.getElementById('y'+tabsl.toString()).contentWindow.term.paste("poweroff");
+    document.getElementById('y'+tabsl.toString()).contentDocument.querySelector("textarea.xterm-helper-textarea").dispatchEvent(new KeyboardEvent('keypress', {charCode: 13}));
+
+    setTimeout(()=>{
+      window.location=options['exit_host'];
+    },1000);
+  },1000);
 }
 
 let tabsn=1

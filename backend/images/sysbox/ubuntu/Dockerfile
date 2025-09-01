@@ -5,7 +5,7 @@ FROM nestybox/ubuntu-noble-systemd-docker:latest
 USER "root"
 
 #Add basic required packages
-RUN apt update && apt-get upgrade -y && DEBIAN_FRONTEND=noninteractive apt-get install -y kmod iproute2 iptables curl wget man vim sudo jq git gawk sed python3 bzip2 xz-utils 7zip zip unzip psmisc && apt clean all && rm -rf /var/lib/apt/lists/*
+RUN apt update && apt-get upgrade -y && DEBIAN_FRONTEND=noninteractive apt-get install -y kmod iproute2 iptables curl wget man vim sudo jq git gawk sed python3 bzip2 xz-utils 7zip zip unzip psmisc bash-completion && apt clean all && rm -rf /var/lib/apt/lists/*
 
 #Nicer shell loggin
 RUN echo "PS1='\\\\[\\\\e]0;\\\\h: \\\\w\\\\a\\\\]\\\\h:\\\\w$ '" >> /root/.bashrc

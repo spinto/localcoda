@@ -473,6 +473,8 @@
     }
   </script>
   <script src="showdown.min.js"></script>
+  <script src="highlight.min.js"></script>
+  <link rel="stylesheet" href="highlight.min.css">
   <script>
     let options={};
     let tutorial_index={};
@@ -527,6 +529,47 @@
     }
     var converter = new showdown.Converter({omitExtraWLInCodeBlocks: true,ghCodeBlocks: false,noHeaderId: true,headerLevelStart: 3,tables: true,tasklists: true,openLinksInNewWindow:true,emoji:true});
     converter.setFlavor('github');
+    hljs.highlightLines = () => {
+      hlel=Array.from(document.getElementsByClassName('hljs'));
+      //Define sub-function
+      function parseHighlightRanges(rangesStr) {
+        const result = new Set();
+        rangesStr.split(',').forEach((part) => {
+          if (part.includes('-')) {
+            const [start, end] = part.split('-').map(Number);
+            for (let i = start; i <= end; i++) result.add(i);
+          } else {
+            result.add(Number(part));
+          }
+        });
+        return [...result];
+      }
+
+      for (i in hlel) {
+        c=hlel[i]
+        cL=Array.from(c.classList)
+        for (k in cL) {
+          cc=cL[k]
+          cclm=cc.match(/^language-[A-Za-z0-9]+\{([0-9,-]*)\}/)
+          if (cclm && cclm.length==2) {
+            const highlightedLines = parseHighlightRanges(cclm[1])
+
+//Add lines
+            c.innerHTML = c.innerHTML.split('\n').map((line, i) => {
+              const lineNumber = i + 1;
+              const isHighlighted = highlightedLines.includes(lineNumber);
+              return `<span class="loc${isHighlighted ? '-highlighted' : ''}">${line}</span>`;
+            })
+            .join('\n');
+
+            //You can stop parsing class lists
+            break;
+
+          }
+        }
+      }
+    }
+
     async function loadPage(n) {
       md='';
       nl=tutorial_index['details']['steps'].length;
@@ -561,13 +604,13 @@
           //convert markdown to html
           md = converter.makeHtml(md);
           //default actions for inline is copy it
-          md = md.replace(/<code[^>]*>(.*?)<\/code>[^<{]/g, '<code class="copy">$1</code>');
+          md = md.replace(/<code[^>]*>([^<]*<\/code>)[^<{]/g, '<code class="copy">$1');
           //replace custom markdown codes (code with class)
-          md = md.replace(/<pre><code[^>]*>(.*?)<\/code><\/pre>\n<p>{{([a-z ]+?)}}<\/p>/sg, '<pre class="$2""><code>$1</code></pre>');
-          md = md.replace(/<code[^>]*>(.*?)<\/code>{{([a-z ]+?)}}/g, '<code class="$2">$1</code>');
+          md = md.replace(/<pre>(<code[^>]*>[^<]*<\/code><\/pre>)\n<p>{{([a-z ]+?)}}<\/p>/sg, '<pre class="$2">$1');
+          md = md.replace(/<code[^>]*>([^<]*<\/code>){{([a-z ]+?)}}/g, '<code class="$2">$1');
           //code without class (no action)
-          md = md.replace(/<pre><code[^>]*>(.*?)<\/code><\/pre>\n<p>{{}}<\/p>/sg, '<pre><code>$1</code></pre>');
-          md = md.replace(/<code[^>]*>(.*?)<\/code>{{}}/g, '<code>$1</code>');
+          md = md.replace(/(<pre><code[^>]*>[^<]*<\/code><\/pre>)\n<p>{{}}<\/p>/sg, '$1');
+          md = md.replace(/(<code[^>]*>[^<]*<\/code>){{}}/g, '$1');
         } catch (error) {
           document.getElementById('t').textContent = 'Failed to load tutorial page: ' + error.message;
           return;
@@ -594,6 +637,11 @@
       }
       pagehtml=pagehtml+'</div><div>&nbsp;</div></div></div></span>';
       document.getElementById('t').innerHTML=pagehtml;
+
+      //highlight code
+      hljs.highlightAll();
+      //highligh lines
+      hljs.highlightLines();
 
       //update events for copy and exec
       Array.from(document.getElementsByClassName('exec')).concat(Array.from(document.getElementsByClassName('copy'))).forEach((a) => {a.onmouseenter=()=>{me(a);};a.onmouseleave=ml;a.onclick=()=>{pc(a)};});

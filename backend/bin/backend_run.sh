@@ -123,19 +123,29 @@ eval IMAGES_MAPFILE="\$IMAGES_${VIRT_ENGINE^^}_MAPFILE"
 [[ -z "$INDEX_FILE" ]] && INDEX_FILE="index.json"
 if [[ -z "$LOCAL_UUID" ]]; then
   LOCAL_UUID=
-  function uidg(){
-    C="89ab"
-    for ((N=0;N<16;++N)); do
-      B="$((RANDOM%256))"
-      case "$N" in
-        6)  printf '4%x' "$((B%16))" ;;
-        8)  printf '%c%x' "${C:$RANDOM%${#C}:1}" "$((B%16))" ;;
-        3|5|7|9) printf '%02x-' "$B" ;;
-        *)  printf '%02x' "$B" ;;
-      esac
-    done
-  }
-  LOCAL_UUID=`uidg`
+  #Check if Kernel UUID is available
+  if [[ -f /proc/sys/kernel/random/uuid ]]; then
+    #Use Kernel UUID, if available 
+    LOCAL_UUID=`tr -d -c '[:alnum:]' < /proc/sys/kernel/random/uuid`
+  elif [[ -f /dev/urandom ]]; then
+    #Use urandom, if Kernel UUID is not available
+    LOCAL_UUID=`tr -dc 'a-z0-9' </dev/urandom | head -c 32`
+  else
+    #Revert to RANDOM variable
+    function uidg(){
+      C="89ab"
+      for ((N=0;N<16;++N)); do
+        B="$((RANDOM%256))"
+        case "$N" in
+          6)  printf '4%x' "$((B%16))" ;;
+          8)  printf '%c%x' "${C:$RANDOM%${#C}:1}" "$((B%16))" ;;
+          3|5|7|9) printf '%02x-' "$B" ;;
+          *)  printf '%02x' "$B" ;;
+        esac
+      done
+    }
+    LOCAL_UUID=`uidg | tr -d '-'`
+  fi
 fi
 
 #Calculate execution container name (using the UUID)

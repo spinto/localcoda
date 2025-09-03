@@ -6,7 +6,9 @@ Run interactive learning tutorials on your own server (or your own Kubernetes cl
 
 ## Disclaimer
 
-This project is heavily inspired by [Killercoda](https://killercoda.com/) and in no way wants to be a replacement of the [Killercoda](https://killercoda.com/) platform. [Killercoda](https://killercoda.com/) is amazing, and you should use it (and buy their Plus membership). Anyway, there are some limitations in Killercoda, one is that, even with the plus membership, you have at maximum 4GB of RAM and limited CPU power, which may be an issue for some applications, and that the tutorial that you publish are public (even if set not searchable), and you may have some proprietary application you may not want to share in the tutorial, but bind (with its license) in an underlying private image. This project addresses such niche use cases.
+This project is heavily inspired by [Killercoda](https://killercoda.com/) and in no way wants to be a replacement of the [Killercoda](https://killercoda.com/) platform. [Killercoda](https://killercoda.com/) is amazing, and you should use it (and buy their Plus membership).
+
+Anyway, there are some limitations in Killercoda, one is that, even with the plus membership, you have at maximum 4GB of RAM and limited CPU power, which may be an issue for some applications, and that the tutorial that you publish are public (even if set not searchable), and you may have some proprietary application you may not want to share in the tutorial, but bind (with its license) in an underlying private image. This project addresses such niche use cases.
 
 ## Quickstart
 

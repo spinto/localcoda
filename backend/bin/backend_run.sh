@@ -230,9 +230,16 @@ done
 
 #Calculate external domain name (if required)
 if [[ "$EXT_DOMAIN_NAME" =~ NIP_ADDRESS ]]; then
-  check_sw hostname awk
-  #Generate nip address hash
-  NIP_ADDRESS="`hostname -I | awk '{split($1, a, "."); printf("%02x%02x%02x%02x.nip.io\n", a[1], a[2], a[3], a[4])}'`"
+  check_sw awk
+  if which ip &>/dev/null; then
+    #If you have ip, use that
+    NIP_ADDRESS="`ip route get 1.1.1.1 | awk '{split($7,a,".");printf("%02x%02x%02x%02x.nip.io\n",a[1],a[2],a[3],a[4]);exit}'`"
+  elif which hostname &>/dev/null; then
+    #Otherwise try with hostname
+    NIP_ADDRESS="`hostname -i | awk '{ for(i=1; i<=NF; i++){if($i !~ /^127\./){split($i,a,".");printf("%02x%02x%02x%02x.nip.io\n",a[1],a[2],a[3],a[4]);exit;}}}'`"
+  else
+    error 22 "Cannot get local IP. I did not find 'ip' nor 'hostname' tools."
+  fi
   eval EXT_DOMAIN_NAME=$EXT_DOMAIN_NAME
 fi
 

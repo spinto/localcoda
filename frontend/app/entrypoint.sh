@@ -26,7 +26,7 @@ TUTORIALS_VOLUME_ACCESS_MOUNT=/data/tutorials
 #Calculate external domain name (if required)
 if [[ "$EXT_DOMAIN_NAME" =~ NIP_ADDRESS ]]; then
   #Generate nip address hash
-  NIP_ADDRESS="`hostname -I | awk '{split($1, a, "."); printf("%02x%02x%02x%02x.nip.io\n", a[1], a[2], a[3], a[4])}'`"
+  NIP_ADDRESS="`hostname -i | awk '{ for(i=1; i<=NF; i++){if($i !~ /^127\./){split($i,a,".");printf("%02x%02x%02x%02x.nip.io\n",a[1],a[2],a[3],a[4]);exit;}}}'`"
   eval EXT_DOMAIN_NAME=$EXT_DOMAIN_NAME
 fi
 eval EXT_FT_MAINHOST=$EXT_FT_MAINHOST_SCHEME

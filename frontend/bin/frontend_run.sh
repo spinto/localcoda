@@ -110,11 +110,20 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
 
     #Get frontend path
     if [[ "$EXT_DOMAIN_NAME" =~ NIP_ADDRESS ]]; then
-      #Generate nip address hash
-      NIP_ADDRESS="`hostname -I | awk '{split($1, a, "."); printf("%02x%02x%02x%02x.nip.io\n", a[1], a[2], a[3], a[4])}'`"
+      check_sw awk
+      if which ip &>/dev/null; then
+        #If you have ip, use that
+        NIP_ADDRESS="`ip route get 1.1.1.1 | awk '{split($7,a,".");printf("%02x%02x%02x%02x.nip.io\n",a[1],a[2],a[3],a[4]);exit}'`"
+      elif which hostname &>/dev/null; then
+        #Otherwise try with hostname
+        NIP_ADDRESS="`hostname -i | awk '{ for(i=1; i<=NF; i++){if($i !~ /^127\./){split($i,a,".");printf("%02x%02x%02x%02x.nip.io\n",a[1],a[2],a[3],a[4]);exit;}}}'`"
+      else
+        error 22 "Cannot get local IP. I did not find 'ip' nor 'hostname' tools."
+      fi
       eval EXT_DOMAIN_NAME=$EXT_DOMAIN_NAME
     fi
     eval EXT_FT_MAINHOST=$EXT_FT_MAINHOST_SCHEME
+
     echo "Your frontend has started and should be accessible from:
     $EXT_PROTO://$EXT_FT_MAINHOST/"
   fi

@@ -488,7 +488,7 @@
         options['ext_proxyhost']=options['ext_proxyhost'].replace('PORT','$1')
         document.getElementById('exitbtn').href=options['exit_host']
       } catch (error) {
-        document.getElementById('t').textContent = 'Failed to load options: ' + error.message;
+        dError('Failed to load options: ' + error.message);
         return;
       }
       //load tutorial index file
@@ -496,9 +496,8 @@
         const response = await fetch('../t/'+options['index_file']);  // Load JSON file
         if (!response.ok) throw new Error('Network response was not ok');
         tutorial_index = await response.json();         // Parse JSON data
-
       } catch (error) {
-        document.getElementById('t').textContent = 'Failed to load tutorial: ' + error.message;
+        dError('Failed to load tutorial: ' + error.message);
         return;
       }
       //Set tutorial base directory for loading stuff
@@ -508,6 +507,26 @@
       //load remaining time
       remainTime()
       setInterval(remainTime,60000)
+    }
+    //Error which is not stopping the work
+    function softError(message){
+      //Check if we have scenario contents with a title
+      const titleel=document.querySelector('#t h1');
+      if (titleel) {
+        titleel.style.backgroundColor='red';
+        const titleel_backtext=titleel.textContent;
+        titleel.textContent=message;
+        setTimeout(()=>{
+          titleel.style.backgroundColor='#000';
+          titleel.textContent=titleel_backtext;
+        },1000);
+      } else {
+        document.getElementById('t').textContent = message;
+      }
+    }
+    //Error which is stopping the work
+    function dError(message){
+      document.getElementById('t').textContent = message;
     }
     function remainTime(){
       if(options['max_time']==-1){
@@ -553,8 +572,7 @@
           cclm=cc.match(/^language-[A-Za-z0-9]+\{([0-9,-]*)\}/)
           if (cclm && cclm.length==2) {
             const highlightedLines = parseHighlightRanges(cclm[1])
-
-//Add lines
+            //Add highlighted lines
             c.innerHTML = c.innerHTML.split('\n').map((line, i) => {
               const lineNumber = i + 1;
               const isHighlighted = highlightedLines.includes(lineNumber);
@@ -569,11 +587,29 @@
         }
       }
     }
+    async function loadPageVerify(verifycmd,n){
+      //run verification script
+      try {
+        const response = await fetch('../c',{ method: 'POST', body: verifycmd });
 
+        if (response.status==400) {
+          //Verfiication failed
+          softError("Check failed. Fix and try again...")
+          return;
+        }else if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      } catch (error) {
+        dError('Failed to load tutorial page: ' + error.message);
+        return;
+      }
+      //Verification is ok, load page;
+      loadPage(n);
+    }
     async function loadPage(n) {
       md='';
       if (!('details' in tutorial_index)) {
-        document.getElementById('t').textContent = 'Invalid scenario: Missing "details" in index.json.';
+        dError('Invalid scenario: Missing "details" in index.json.');
         return;
       }
       if ('steps' in tutorial_index['details']) {
@@ -581,6 +617,9 @@
       } else {
         nl=0;
       }
+      page_verify='';
+      page_md_path='';
+      page_title='';
       if(n==-1) {
         if('intro' in tutorial_index['details']){
           page_md_path=tutorial_index['details']['intro']['text'];
@@ -591,6 +630,9 @@
       }else if(n<nl){
 	      page_md_path=tutorial_index['details']['steps'][n]['text'];
         page_title=tutorial_index['details']['steps'][n]['title'];
+        if ('verify' in tutorial_index['details']['steps'][n]) {
+          page_verify=tutorial_index['details']['steps'][n]['verify'];
+        }
       }else{
         if('finish' in tutorial_index['details']){
           page_md_path=tutorial_index['details']['finish']['text'];
@@ -620,7 +662,7 @@
           md = md.replace(/(<pre><code[^>]*>[^<]*<\/code><\/pre>)\n<p>{{}}<\/p>/sg, '$1');
           md = md.replace(/(<code[^>]*>[^<]*<\/code>){{}}/g, '$1');
         } catch (error) {
-          document.getElementById('t').textContent = 'Failed to load tutorial page: ' + error.message;
+          dError('Failed to load tutorial page: ' + error.message);
           return;
         }
       }
@@ -636,7 +678,11 @@
     	  if(n>0){
           pagehtml=pagehtml+'<button class="back-button" onclick="loadPage('+(n-1).toString()+')"><span>BACK</span></button>';
         }
-        pagehtml=pagehtml+'<button class="next-button" onclick="loadPage('+(n+1).toString()+')"><span>NEXT</span></button>';
+        if (page_verify) {
+          pagehtml=pagehtml+'<button class="next-button" onclick="loadPageVerify('+"'"+page_verify+"',"+(n+1).toString()+')"><span>CHECK</span></button>';
+        } else {
+          pagehtml=pagehtml+'<button class="next-button" onclick="loadPage('+(n+1).toString()+')"><span>NEXT</span></button>';
+        }
       }else{
         pagehtml=pagehtml+'<button class="back-button" onclick="loadPage('+(n-1).toString()+')"><span>START</span></button>';
         pagehtml=pagehtml+'<button class="extra-button" onclick="window.location=window.location;"><span>RESTART</span></button>';
@@ -750,17 +796,15 @@ function fallbackCopyText(text) {
   document.body.removeChild(textarea);
 }
 
-function scenarioPoweroff(){
-  //Open a new shell, execute a poweroff
-  setTimeout(()=>{ nt(); },10);
-  setTimeout(()=>{
-    document.getElementById('y'+tabsl.toString()).contentWindow.term.paste("poweroff");
-    document.getElementById('y'+tabsl.toString()).contentDocument.querySelector("textarea.xterm-helper-textarea").dispatchEvent(new KeyboardEvent('keypress', {charCode: 13}));
-
-    setTimeout(()=>{
-      window.location=options['exit_host'];
-    },1000);
-  },1000);
+async function scenarioPoweroff(){
+  //Execute a poweroff command (its output is probably a failure, because the scenario dies, so we do not wait for its output
+  try {
+    const response = await fetch('../c',{ method: 'POST', body: '/usr/sbin/poweroff' });
+  } catch (error) {
+    console.error('Error:', error);
+  }
+  //Redirect outside
+  window.location=options['exit_host'];
 }
 
 let tabsn=1

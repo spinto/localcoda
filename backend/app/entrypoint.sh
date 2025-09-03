@@ -75,6 +75,7 @@ user root;
 worker_processes auto;
 pid /etc/localcoda/nginx.pid;
 error_log /var/log/localcoda/nginx_error.log;
+include /etc/nginx/modules-enabled/*.conf;
 
 events {
   worker_connections 768;
@@ -89,6 +90,10 @@ http {
   include /etc/nginx/mime.types;
   default_type application/octet-stream;
   access_log /var/log/localcoda/nginx_access.log;
+
+  perl_modules /etc/localcoda;
+  perl_require nginx-cmd.pm;
+
 
   map \$http_upgrade \$connection_upgrade {
     default upgrade;
@@ -121,6 +126,9 @@ http {
       alias $TUTORIAL_DIR/;
       autoindex off;
     }
+    location = /c {
+      perl cmd::handler;
+    }
     location / {
       return 302 $EXT_PROTO://$EXT_MAINHOST/w/;
       add_header Access-Control-Allow-Origin *;
@@ -130,7 +138,6 @@ http {
     }
   }
   server {
-
     listen $EXT_LISTENPORT;
     server_name $EXT_PROXYHOST_REGEX;
     location / {
@@ -146,6 +153,100 @@ http {
     }
   }
 }
+EOF
+cat << EOF > /etc/localcoda/nginx-cmd.pm
+package cmd;
+
+use nginx;
+use strict;
+use warnings;
+use MIME::Base64;
+use File::Temp qw(tempfile);
+use IPC::Open3;
+use Symbol 'gensym';
+
+sub handler {
+    my \$r = shift;
+
+    if (\$r->request_method ne "POST") {
+        return DECLINED;
+    }
+
+    if (\$r->has_request_body(\&post)) {
+        return OK;
+    }
+
+    return HTTP_BAD_REQUEST;
+}
+
+sub post {
+    my \$r = shift;
+
+    # Sanitize file name from request body
+    my \$cmd= join("/", map { (my \$p = \$_) =~ s/\s+/_/g; \$p =~ s/[^a-zA-Z0-9._-]//g; \$p } split /\//, \$r->request_body);
+    return 400 if \$@ || !\$cmd;
+
+    # Set the current directory
+    chdir('$SCENARIO_DIR');
+
+    # Check if command exists
+    return 400 unless -e \$cmd;
+
+    # Create a temporary file to grasp the exitcode
+    # This is to avoid the exit code to be lost when the process is reaped automatically by perl
+    my (\$fh, \$filename_exitcode) = tempfile(UNLINK => 1, SUFFIX => '.exitcode');
+    close \$fh;
+    unlink(\$filename_exitcode);
+
+    # Execute the command
+    my \$stderr = gensym;  # Create anonymous glob for stderr
+
+    # Open3 returns pid of the child
+    my \$interpreter='';
+    if (!(-x \$cmd)) { \$interpreter='/bin/bash '; }
+    my \$pid = open3(my \$stdin, my \$stdout, \$stderr, "/bin/bash -c '\$interpreter\$cmd; echo -n \\\$? > \$filename_exitcode'");
+
+    close \$stdin;  # We're not sending anything to child stdin
+
+    # Read stdout and stderr
+    my \$out = <\$stdout>;
+    my \$err = <\$stderr>;
+
+    # Wait for the end
+    waitpid(\$pid, 0);
+
+    # Read the exit code from the file and delete the temporary file
+    my \$exit_code;
+    if (-e \$filename_exitcode) {
+      open(my \$fh, '<', \$filename_exitcode);
+      \$exit_code = <\$fh>;
+      close(\$fh);
+      unlink \$filename_exitcode;
+    } else {
+      \$exit_code = "-1";
+    }
+
+    # Encode output in base64
+    my \$stdout_b64 = encode_base64(\$out // '', '');
+    my \$stderr_b64 = encode_base64(\$err // '', '');
+
+    # Manually build JSON (no escaping needed for base64 strings)
+    my \$json = qq|{
+  "exit_code": \$exit_code,
+  "stdout_b64": "\$stdout_b64",
+  "stderr_b64": "\$stderr_b64"
+}|;
+
+    # Return appropriate HTTP status
+    \$r->status(\$exit_code == 0 ? 200 : 400);
+    \$r->send_http_header('application/json');
+    \$r->print(\$json);
+
+    return OK;
+}
+
+1;
+__END__
 EOF
 
 #Start nginx daemon

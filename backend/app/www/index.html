@@ -684,9 +684,9 @@
           pagehtml=pagehtml+'<button class="next-button" onclick="loadPage('+(n+1).toString()+')"><span>NEXT</span></button>';
         }
       }else{
-        pagehtml=pagehtml+'<button class="back-button" onclick="loadPage('+(n-1).toString()+')"><span>START</span></button>';
-        pagehtml=pagehtml+'<button class="extra-button" onclick="window.location=window.location;"><span>RESTART</span></button>';
-        pagehtml=pagehtml+'<button class="extra-button" onclick="window.location=\\"/\\";"><span>SCENARIOS</span></button>';
+        pagehtml=pagehtml+'<button class="back-button" onclick="loadPage('+(n-1).toString()+')"><span>BACK</span></button>';
+        pagehtml=pagehtml+"<button class=\"extra-button\" onclick=\"window.location='/';\"><span>RESTART</span></button>";
+        pagehtml=pagehtml+"<button class=\"extra-button\" onclick=\"window.location='"+options['exit_host']+"'\"><span>SCENARIOS</span></button>";
         pagehtml=pagehtml+'<button class="extra-button" onclick="scenarioPoweroff();"><span>POWEROFF</span></button>';
       }
       pagehtml=pagehtml+'</div><div>&nbsp;</div></div></div></span>';

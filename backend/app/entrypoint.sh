@@ -5,7 +5,7 @@ function error(){
   echo "ERROR: $2"
   exit $1
 }
-for s in ip jq nginx ttyd; do
+for s in ip jq nginx ttyd mountpoint; do
   which $s &>/dev/null || error 2 "$s is required! Please install it"
 done
 
@@ -66,6 +66,14 @@ echo "$EXT_PROTO://$EXT_PROXYHOST" > /etc/localcoda/host
 #Logs folder
 mkdir -p /var/log/localcoda/
 
+#Detect if we are running in development mode (www is mounted). If so, we disable cache in nginx
+mountpoint $WWW_DIR &>/dev/null && LOCALCODA_DEVELOPMENT_MODE_NGINX="# kill cachce for development mode
+      add_header Last-Modified \$date_gmt;
+      add_header Cache-Control 'no-store, no-cache';
+      if_modified_since off;
+      expires off;
+      etag off;" || LOCALCODA_DEVELOPMENT_MODE_NGINX=
+
 #Building nginx configuration
 EXT_PROXYHOST_REGEX="${EXT_PROXYHOST/PORT/(?<redport>[0-9]+)}"
 EXT_PROXYHOST_REGEX="${EXT_PROXYHOST_REGEX%:*}"
@@ -125,6 +133,7 @@ http {
     location /t {
       alias $TUTORIAL_DIR/;
       autoindex off;
+      $LOCALCODA_DEVELOPMENT_MODE_NGINX
     }
     location = /c {
       perl cmd::handler;

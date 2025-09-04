@@ -103,6 +103,10 @@ The main application configuration is contained in the `backend/cfg/conf` file. 
 
 For more information about specific configuration options, like adding your own custom backend scenario image or using the sysbox virtualization engine for additional security and isolation, you can refer to the [ADVANCED_CONFIG.md](docs/ADVANCED_CONFIG.md) guide. Have a look at it if you want to setup a production environment.
 
+## Scenarios development
+
+Localcoda lets you easily develop scenarios, who you can then publish on another localcoda instance or on [Killercoda](https://killercoda.com/). The quickest way to do so is to run the [Single-scenario run, on a local machine](#single-scenario-run-on-a-local-machine) mode from above, but adding the `-Ldev` switch. In this mode, caching will be disabled and you will be able to edit your tutorial directly on your local machine and immediately see its changes into the localcoda web application.
+
 ## More deployment options
 
 The quickstart mode on top displays only some of the most common deployments and basic customizations. There are other modes you can deploy, like the full mode on a local server instead of a Kubernetes cluster, or a multi-tutorial mode without authorization. For a detailed deployment guide on a single virtual machine, you can look at the [DEPLOY_LOCAL.md](docs/DEPLOY_LOCAL.md) file. For a detailed deployment guive on a Kubernetes cluster, you can look at the [DEPLOY_KUBERNETES.md](docs/DEPLOY_KUBERNETES.md) file.

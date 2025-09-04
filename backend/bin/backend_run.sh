@@ -59,9 +59,10 @@ Options:
   -d | --nowait  do not wait for the backend to be ready before closing the app. The script
                  will release once the backend is started, and you can check its status via
                  the backend_ls command
-  -Ldev          enable development mode. This will directly mount in read/write the frontend directories from
-                 this repository instead of the ones in the image. Only for development and only
-                 for local orchestrator.
+  -Ldev          enable development mode. This will directly mount in read/write the backend
+                 application directories, and will disable server caching, so you can quickly
+                 see the results of local modifications to the tutorials and to the backend
+                 application. Only for development and only for the local orchestrator.
 :usage
   exit 1
 }

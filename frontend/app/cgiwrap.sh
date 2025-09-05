@@ -303,7 +303,7 @@ elif cmd=="run":
   else:
     tut_areaname=tut_splitpath[1]
   tut_scenariopath=arg+os.sep+'index.json'
-  tut_scenariopath=tut_scenariopath[len(tut_areaname)+1:]
+  tut_scenariopath=tut_scenariopath[len(tut_areaname)+1:].lstrip('/')
 
   #Create run command
   cmd=['/bin/bash','/opt/localcoda/backend/bin/backend_run.sh','-o','TUTORIALS_VOLUME_ACCESS_MOUNT=/data/tutorials','-q','-d',tut_areaname,tut_scenariopath]

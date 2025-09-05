@@ -112,8 +112,9 @@ elif [[ $ORCHESTRATION_ENGINE == "kubernetes" ]]; then
   check_env KUBERNETES_NAMESPACE
 
   KUBECTL_EXTRA_SEL=
-  [[ -n "$INSTANCE_USERNAME" ]] && KUBECTL_EXTRA_SEL=",localcoda-user=$INSTANCE_USERNAME"
-  kubectl get pod -n "$KUBERNETES_NAMESPACE" --selector=localcoda-instanceid,job-name$KUBECTL_EXTRA_SEL -o jsonpath='{"["}{range .items[*]}{"{\"id\":\""}{.metadata.labels.localcoda-instanceid}{"\",\"user\":\""}{.metadata.labels.localcoda-user}{"\",\"ready\":\""}{.status.containerStatuses[*].ready}{"\",\"access_url\":\""}{.metadata.annotations.readyurl}{"\",\"instance_name\":\"job/"}{.metadata.labels.job-name}{"\",\"tutorial_path\":\""}{.metadata.annotations.tutorialpath}{"\",\"start_time\":\""}{.metadata.annotations.starttime}{"\",\"max_time\":\""}{.metadata.annotations.maxtime}{"\"},"}{end}{"]"}' | sed 's/,]$/]/'
+  [[ -n "$LOCAL_UUID" ]] && KUBECTL_EXTRA_SEL="$KUBECTL_EXTRA_SEL=$LOCAL_UUID"
+  [[ -n "$INSTANCE_USERNAME" ]] && KUBECTL_EXTRA_SEL="$KUBECTL_EXTRA_SEL,localcoda-user=$INSTANCE_USERNAME"
+  kubectl get pod -n "$KUBERNETES_NAMESPACE" --selector=localcoda-instanceid$KUBECTL_EXTRA_SEL -o jsonpath='{"["}{range .items[*]}{"{\"id\":\""}{.metadata.labels.localcoda-instanceid}{"\",\"user\":\""}{.metadata.labels.localcoda-user}{"\",\"ready\":\""}{.status.containerStatuses[*].ready}{"\",\"access_url\":\""}{.metadata.annotations.readyurl}{"\",\"instance_name\":\"job/"}{.metadata.labels.job-name}{"\",\"tutorial_path\":\""}{.metadata.annotations.tutorialpath}{"\",\"start_time\":\""}{.metadata.annotations.starttime}{"\",\"max_time\":\""}{.metadata.annotations.maxtime}{"\"},"}{end}{"]"}' | sed 's/,]$/]/'
   [[ $? -ne 0 ]] && error 44 "Failed to run kubernetes get pod"
 
 else

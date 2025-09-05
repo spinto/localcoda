@@ -216,6 +216,7 @@
     }
   </style>
   <script>
+    'use strict';
     async function startup() {
       //Check if you are logged in or not, and set user button
       const user_info = await ctlFetch('me');
@@ -226,7 +227,7 @@
       //If no
       if(user_info['username']!="") {
         //Show logged user button
-        ul = document.getElementById('userbtn');
+        const ul = document.getElementById('userbtn');
         ul.textContent=user_info['username'];
         ul.style.visibility='';
       }
@@ -245,6 +246,7 @@
       return
     }
     async function ctlFetch(cl) {
+      let structure;
       //Fetch JSON response
       try {
         const response = await fetch('ctl/'+cl);
@@ -279,7 +281,7 @@
       pagecontents.classList=[];
       pagecontents.innerHTML="";
       //Load current hash
-      cl=window.location.hash;
+      let cl=window.location.hash;
       //Default page is browse
       if(cl=="") cl='#browse';
       //Redirect to the proper load page
@@ -307,12 +309,12 @@
       }
       //If logged in
       document.getElementById('p').textContent="You are logged in as "+user_info['username'];
-      pagetext="<br/>You are a member of the following groups:<br/><ul>";
-      for (g in user_info['groups']) {
+      let pagetext="<br/>You are a member of the following groups:<br/><ul>";
+      for (let g in user_info['groups']) {
         pagetext=pagetext+"<li>"+user_info['groups'][g]+"</li>";
       }
       pagetext=pagetext+"</ul><br/>Your scenario executions will have the following constraints:<ul>";
-      for (g in user_info['overrides']) {
+      for (let g in user_info['overrides']) {
         switch(g) {
           case "MAXIMUM_RUN_PER_USER":
             if(user_info['overrides'][g]==-1){
@@ -357,7 +359,7 @@
       document.getElementById('t').innerHTML=pagetext;
     }
     function impersonate(){
-      userInput = prompt("Enter the ID of the user to impersonate");
+      const userInput = prompt("Enter the ID of the user to impersonate");
       if (userInput !== null) window.location='ctl/impersonate?usr='+userInput;
     }
     async function loadPageBrowse(cl) {
@@ -369,9 +371,9 @@
       const structure = await ctlFetch(cl);
       if(structure == null) return;
       let items=structure["items"];
-      let gridHTML="";
-      for (var ii in items) {
-        i=items[ii];
+      let gridHTML="",gridLink,gridTheme,gridImg;
+      for (let ii in items) {
+        const i=items[ii];
         if (i['type']=='scenario') {
           gridLink="window.location.hash='"+cl.replace(/^browse/,'run')+"/"+i['path']+"'";
         }else{
@@ -398,7 +400,7 @@
       let gridTitle=""; let gridTitleBase="";
       let pathEl=structure['paths'];
       for (let ii=0; ii<pathEl.length; ii++){
-        i=pathEl[ii];
+        let i=pathEl[ii];
         if (ii!=0) { gridTitle=gridTitle+" / " }
         gridTitle=gridTitle+"<a href=\"#browse"+i['path']+"\">"+i['title']+"</a>";
       }
@@ -481,22 +483,23 @@
 
         // Scenario
         td = document.createElement("td");
-        scenarioPath=item.tutorial_path.replace(/^\//,"").replace(/\/index\.json$/, "");
-        scenariolink = document.createElement("a");
+        const scenarioPath=item.tutorial_path.replace(/^\//,"").replace(/\/index\.json$/, "");
+        const scenariolink = document.createElement("a");
         scenariolink.href = "#browse/"+scenarioPath.replace(/[^/]*?$/, "");
         scenariolink.textContent = scenarioPath;
         td.appendChild(scenariolink);
         row.appendChild(td);
 
         // Time remaning/elapsed
+        let remaining_seconds;
         if(item['max_time']==-1){
           remaining_seconds=Math.floor(new Date().getTime() / 1000)-parseInt(item['start_time']);
         }else{
           remaining_seconds=parseInt(item['start_time']) + parseInt(item['max_time']) - Math.floor(new Date().getTime() / 1000);
         }
-        hours = Math.floor(remaining_seconds / 3600);
-        minutes = Math.floor((remaining_seconds - (hours * 3600)) / 60);
-        rt='';
+        const hours = Math.floor(remaining_seconds / 3600);
+        const minutes = Math.floor((remaining_seconds - (hours * 3600)) / 60);
+        let rt='';
         if(hours > 0) {
           rt=hours.toString() +' hours ';
         }
@@ -560,6 +563,7 @@
       }
       //Wait till the scenario is ready or till a timeout is reached
       document.getElementById('p').innerHTML="Starting scenario... Waiting in queue...";
+      let run;
       for (let run_timeout=120; run_timeout>0; run_timeout=run_timeout-1) {
         run = await ctlFetch('ls/'+instance.uuid);
         if(run == null) {
@@ -576,7 +580,7 @@
         const au = run[0]['access_url'];
         //Wait still some time for the ingresses and nginx proxies to settle
         document.getElementById('p').innerHTML="Starting scenario... Waiting for scenario startup...";
-        is_accessible=false;
+        let is_accessible=false;
         for (let run_timeout=30; run_timeout>0; run_timeout=run_timeout-1) {
 
           try {
@@ -613,7 +617,7 @@
       document.getElementById('p').innerHTML="Stopping scenario...";
       document.getElementById('t').innerHTML="Please wait to be redirected...";
       //Check if scenario exist and is running
-      cll=cl.replace(/^stop/,'ls');
+      const cll=cl.replace(/^stop/,'ls');
       const run = await ctlFetch(cll);
       if(run == null) {
         dError("Failed to check scenario existence. Please contact administrator!");

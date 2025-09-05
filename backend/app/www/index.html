@@ -212,22 +212,29 @@
       padding: 0px;
       overflow: auto;
       width: 33.33%; /* Default width one-third */
-      min-width: 400px; /* Minimum width */
       flex-shrink: 0;
     }
 
     .panel-right {
       flex: 1;
-      min-width: 400px;
+      width: calc(66.67% - 5px); /* Default width the remaining two-third */
     }
 
      /* Make iframe fill right panel */
     .panel-right iframe {
       position: absolute;
-      width: 100%;
+      width: inherit;
       height: calc(100% - 70px);
       border: none;
     }
+
+    /* Resizer bar */
+    .resizer {
+      width: 5px;
+      cursor: col-resize;
+      background-color: #ccc;
+    }
+
 
     .tabs {
       display: flex;
@@ -279,15 +286,6 @@
     .tabs-right {
       position: absolute;
       right: 10px;
-    }
-
-
-
-    /* Resizer bar */
-    .resizer {
-      width: 5px;
-      cursor: col-resize;
-      background-color: #ccc;
     }
 
     /* markdown details */
@@ -438,28 +436,35 @@
   </style>
   <script>
     function resizerMouseMove(e) {
+      //Get right and left panels
       const resizer = document.getElementById('resizer');
       const leftPanel = resizer.previousElementSibling;
       const rightPanel = resizer.nextElementSibling;
+      const container = resizer.parentElement;
 
-      const containerLeft = leftPanel.parentElement.getBoundingClientRect().left;
-      let newWidth = e.clientX - containerLeft;
+      //determine new width of the panels
+      let newWidthLeft = e.clientX - leftPanel.getBoundingClientRect().left;
+      // Enforce minimum width of 200px for the left panel. This needs to be the same as min-width of the CSS
+      if (newWidthLeft < 200) newWidthLeft = 200;
+      let newWidthRight = container.getBoundingClientRect().width - newWidthLeft - resizer.offsetWidth;
+      // Enforce panel right minimum width of 200px also, if you have enough pixels
+      if (newWidthRight < 200 && newWidthLeft+newWidthLeft > 405) {
+        let newWidthRightDiff=200-newWidthRight;
+        newWidthRight=200;
+        newWidthLeft=newWidthLeft-newWidthRightDiff;
+      }
 
-      // Enforce minimum width of 200px
-      if (newWidth < 200) newWidth = 200;
-
-      // Enforce max width so right panel doesn't disappear (optional)
-      const containerWidth = leftPanel.parentElement.getBoundingClientRect().width;
-      if (newWidth > containerWidth - 100) newWidth = containerWidth - 100;
-
-      leftPanel.style.width = newWidth + 'px';
-      leftPanel.style.flex = 'none';
+      leftPanel.style.width = newWidthLeft + 'px';
+      rightPanel.style.width = newWidthRight + 'px';
+      for (let i=1;i<=tabsl;i++){
+        document.getElementById('y'+i.toString()).style.width=newWidthRight + 'px';
+      }
     }
     function resizerMouseDown() {
         document.body.style.cursor = 'col-resize';
         document.addEventListener('mousemove', resizerMouseMove);
         document.addEventListener('mouseup', resizerMouseUp);
-	for (let i=1;i<=tabsl;i++){
+        for (let i=1;i<=tabsl;i++){
           document.getElementById('y'+i.toString()).style.pointerEvents='none';
         }
     }

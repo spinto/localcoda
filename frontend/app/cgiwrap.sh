@@ -28,7 +28,7 @@ def perror(c, d=None):
     }
     print(json.dumps(error_data))
     sys.exit(0)  # Stop further execution after sending the error
-def psuccess(data, c=200):
+def psuccess(data, c=200, nocache=True):
     """
     Send a successful JSON response in a CGI script.
     
@@ -37,9 +37,12 @@ def psuccess(data, c=200):
         c (int, optional): HTTP status code (default 200).
     """
     # CGI scripts must print the headers first
-    print(f"Status: {c} {http_res.get(c, '')}")
-    print("Content-Type: application/json\n")
-    
+    if nocache:
+      # Disable caching by default
+      print(f"Status: {c} {http_res.get(c, '')}\nContent-Type: application/json\nCache-Control: no-cache, no-store, must-revalidate\nPragma: no-cache\nExpires: 0\n")
+    else:
+      print(f"Status: {c} {http_res.get(c, '')}\nContent-Type: application/json\n")
+
     # Ensure the data is JSON-serializable
     if isinstance(data,str):
       print(data)
@@ -229,7 +232,9 @@ if cmd=="browse":
     if 'description' not in d: d['description']=''
     new_items.append(d)
   st['items']=new_items
-  psuccess(st)
+
+  #Display the output (and enable caching, as this can be cached)
+  psuccess(st,200,False)
 
 elif cmd=="run":
   #Load user info (if any). We need the user, the groups and the overrides, so level 2. user_groups will be None if authentication is disabled, otherwise it is the list of groups which we need to match with the structure group metadata

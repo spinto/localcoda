@@ -264,6 +264,11 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
 	fi
   [[ "$BACKEND_T_MODE" == "rw" ]] || DOCKER_RUN_ARGS="$DOCKER_RUN_ARGS,ro"
 
+  # Volume mounts requiring shared bind mount propagation - e.g. for CSI drivers
+  eval KUBELET_LOCAL_BIND_MOUNT=${LOCAL_BIND_MOUNT_ROOT}/kubelet
+  mkdir -p "${KUBELET_LOCAL_BIND_MOUNT}"  # eval zzz
+  DOCKER_RUN_ARGS="$DOCKER_RUN_ARGS --mount type=bind,source=${KUBELET_LOCAL_BIND_MOUNT},target=/var/lib/kubelet,bind-propagation=rshared"
+
   #Get runtime engine
   if [[ $VIRT_ENGINE == "docker" ]]; then
     DOCKER_RUN_ARGS="$DOCKER_RUN_ARGS --privileged --cgroupns=host"

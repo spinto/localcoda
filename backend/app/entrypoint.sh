@@ -102,6 +102,11 @@ http {
   perl_modules /etc/localcoda;
   perl_require nginx-cmd.pm;
 
+  # Large buffer sizes for handling large headers (e.g., auth tokens, OIDC flows etc.)
+  proxy_buffer_size          32k;
+  proxy_buffers              8 32k;
+  proxy_busy_buffers_size    64k;
+  large_client_header_buffers 4 32k;
 
   map \$http_upgrade \$connection_upgrade {
     default upgrade;

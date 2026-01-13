@@ -266,7 +266,7 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
 
   # Volume mounts requiring shared bind mount propagation - e.g. for CSI drivers
   eval KUBELET_LOCAL_BIND_MOUNT=${LOCAL_BIND_MOUNT_ROOT}/kubelet
-  mkdir -p "${KUBELET_LOCAL_BIND_MOUNT}"  # eval zzz
+  mkdir -p "${KUBELET_LOCAL_BIND_MOUNT}"
   DOCKER_RUN_ARGS="$DOCKER_RUN_ARGS --mount type=bind,source=${KUBELET_LOCAL_BIND_MOUNT},target=/var/lib/kubelet,bind-propagation=rshared"
 
   #Get runtime engine

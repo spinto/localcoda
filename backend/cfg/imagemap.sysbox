@@ -1,5 +1,5 @@
-#Use the format <image-ID-in-tutorial> <image-name-plus-tag> <image-hostname> (spaces are not allowed in any of hte entries)
-ubuntu spinto/localcoda-sysbox-ubuntu:latest ubuntu
-ubuntu-4GB spinto/localcoda-sysbox-ubuntu:latest ubuntu
-kubernetes-kubeadm-1node spinto/localcoda-sysbox-k3s:latest controlplane
-kubernetes-kubeadm-1node-4GB spinto/localcoda-sysbox-k3s:latest controlplane
+#Use the format <image-ID-in-tutorial> <image-name-plus-tag> <image-hostname> <memory limit> <cpu limit> (spaces are not allowed in any of the entries)
+ubuntu spinto/localcoda-sysbox-ubuntu:latest ubuntu 0 0
+ubuntu-4GB spinto/localcoda-sysbox-ubuntu:latest ubuntu 0 0
+kubernetes-kubeadm-1node spinto/localcoda-sysbox-k3s:latest controlplane 0 0
+kubernetes-kubeadm-1node-4GB spinto/localcoda-sysbox-k3s:latest controlplane 0 0

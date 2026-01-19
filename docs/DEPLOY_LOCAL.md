@@ -49,8 +49,11 @@ If you do not want to do that, you can manually setup a reverse proxy on front o
     server_name ~-(?<redport>[0-9]+)\\.$EXT_DOMAIN_NAME\$;
     location / {
       proxy_pass http://127.0.0.1:\$redport;
+      proxy_set_header Host \$http_host;
+      proxy_set_header X-Forwarded-Host \$http_host;
       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
       proxy_set_header X-Forwarded-Proto \$scheme;
+      proxy_http_version 1.1;
       proxy_set_header Upgrade \$http_upgrade;
       proxy_set_header Connection \$connection_upgrade;
       proxy_set_header Host \$host;

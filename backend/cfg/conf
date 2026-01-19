@@ -27,6 +27,8 @@ EXT_BK_MAINHOST_SCHEME="\$LOCAL_UUID-lc\$EXT_DOMAIN_NAME"
 EXT_BK_PROXYHOST_SCHEME="\$PORT-\$LOCAL_UUID-lc\$EXT_DOMAIN_NAME"
 #Backend orchestration execution identifier shcheme (you should never change this, unless you know what you are doing)
 EXECUTION_NAME_SCHEME="lc-bk-\$LOCAL_UUID"
+#Root directory for local volume bind mounts
+LOCAL_BIND_MOUNT_ROOT="\${HOME}/localcoda/\${LOCAL_UUID}"
 #Tutorials volume/pvc name. If this is a PVC, it is created with ReadWriteMany (you should never change this, unless you know what you are doing)
 TUTORIALS_VOLUME="lc-tutorials"
 #Local mount of the tutorials volume. If set, backend will check the volume againist this path, avoiding accessing the volume via specific containers. Note that, if running the backend via the frontend, this parameter is ignored and always set to /data/tutorial , which is the hardocded mount path in the frontend (you should never change this, unless you know what you are doing)

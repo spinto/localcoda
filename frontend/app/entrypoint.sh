@@ -150,15 +150,30 @@ if [[ "$LOCAL_INT_F_PROXY" == "true" ]]; then
     default upgrade;
     '' close;
   }
-
+  # Extract port from Host header if present
+  map $http_host $forwarded_port {
+      # Host includes a port → extract it
+      ~^(?<h>[^:]+):(?<p>\d+)$  $p;
+      # No port → choose default based on scheme
+      default $scheme_default_port;
+  }
+  # Determine default port based on scheme
+  map $scheme $scheme_default_port {
+      http   80;
+      https  443;
+  }
   #Proxy for local deployment
   server {
     listen $LOCAL_EXT_IPPORT;
     server_name ~-(?<redport>[0-9]+)\\.$EXT_DOMAIN_NAME\$;
     location / {
       proxy_pass http://127.0.0.1:\$redport;
+      proxy_set_header Host \$http_host;
+      proxy_set_header X-Forwarded-Host \$http_host;
       proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
       proxy_set_header X-Forwarded-Proto \$scheme;
+      proxy_set_header X-Forwarded-Port \$forwarded_port;
+      proxy_http_version 1.1;
       proxy_set_header Upgrade \$http_upgrade;
       proxy_set_header Connection \$connection_upgrade;
       proxy_set_header Host \$host;

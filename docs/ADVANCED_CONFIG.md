@@ -84,6 +84,7 @@ Then you can run a scenario via sysbox by selecting the sysbox engine with
 
 ```
 backend/bin/backend_run.sh -o VIRT_ENGINE=sysbox ../scenarios-docker environment-variables/index.json
+```
 
 ## Set scenario memory and CPU limits
 

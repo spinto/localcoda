@@ -22,6 +22,8 @@ VOLUME /var/lib/cni
 VOLUME /var/log
 
 #Local-coda specific application installation (blocking entrypoint version)
-RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get upgrade -y && apt-get install -y nginx libnginx-mod-http-perl bash jq && apt-get clean all && rm -rf /var/lib/apt/lists/* && systemctl disable nginx && curl -L https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 > /usr/bin/ttyd && chmod +x /usr/bin/ttyd && ln -s /etc/localcoda/entrypoint-poweroff /usr/sbin/poweroff
+#Target architecture (amd64, arm64). Set automatically by BuildKit; defaults to the build host architecture on the legacy builder
+ARG TARGETARCH
+RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get upgrade -y && apt-get install -y nginx libnginx-mod-http-perl bash jq && apt-get clean all && rm -rf /var/lib/apt/lists/* && systemctl disable nginx && TTYD_ARCH=$(case "${TARGETARCH:-$(dpkg --print-architecture)}" in arm64) echo aarch64;; *) echo x86_64;; esac) && curl -L https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.$TTYD_ARCH > /usr/bin/ttyd && chmod +x /usr/bin/ttyd && ln -s /etc/localcoda/entrypoint-poweroff /usr/sbin/poweroff
 COPY localcoda-app /etc/localcoda
 ENTRYPOINT ["/bin/bash","/etc/localcoda/entrypoint-blocking"]

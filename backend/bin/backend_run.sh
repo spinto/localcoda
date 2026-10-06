@@ -269,6 +269,10 @@ if [[ $ORCHESTRATION_ENGINE == "local" ]]; then
     DOCKER_RUN_ARGS="$DOCKER_RUN_ARGS --privileged --cgroupns=host"
   elif [[ $VIRT_ENGINE == "sysbox" ]]; then
     DOCKER_RUN_ARGS="$DOCKER_RUN_ARGS --runtime=sysbox-runc"
+    # Nested CSI drivers need access to the host FUSE device.
+    if [[ -c /dev/fuse ]]; then
+      DOCKER_RUN_ARGS="$DOCKER_RUN_ARGS --device=/dev/fuse"
+    fi
   else
     error 32 "Virtualization engine $VIRT_ENGINE not supported in local mode"
 	fi

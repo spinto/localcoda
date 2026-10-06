@@ -151,14 +151,14 @@ if [[ "$LOCAL_INT_F_PROXY" == "true" ]]; then
     '' close;
   }
   # Extract port from Host header if present
-  map $http_host $forwarded_port {
+  map \$http_host \$forwarded_port {
       # Host includes a port → extract it
-      ~^(?<h>[^:]+):(?<p>\d+)$  $p;
+      ~^(?<h>[^:]+):(?<p>\\d+)\$  \$p;
       # No port → choose default based on scheme
-      default $scheme_default_port;
+      default \$scheme_default_port;
   }
   # Determine default port based on scheme
-  map $scheme $scheme_default_port {
+  map \$scheme \$scheme_default_port {
       http   80;
       https  443;
   }
@@ -176,7 +176,6 @@ if [[ "$LOCAL_INT_F_PROXY" == "true" ]]; then
       proxy_http_version 1.1;
       proxy_set_header Upgrade \$http_upgrade;
       proxy_set_header Connection \$connection_upgrade;
-      proxy_set_header Host \$host;
       proxy_redirect off;
       proxy_buffering off;
       proxy_hide_header access-control-allow-origin;

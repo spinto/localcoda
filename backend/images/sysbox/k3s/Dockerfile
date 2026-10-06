@@ -10,11 +10,10 @@ RUN apt update && apt-get upgrade -y && DEBIAN_FRONTEND=noninteractive apt-get i
 RUN echo "PS1='\\\\[\\\\e]0;\\\\h: \\\\w\\\\a\\\\]\\\\h:\\\\w$ '" >> /root/.bashrc
 
 # Install K3s and and Helm.
-RUN  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash && curl -sfL https://get.k3s.io | INSTALL_K3S_SKIP_ENABLE=true INSTALL_K3S_SKIP_START=true INSTALL_K3S_EXEC="--disable=traefik --disable=servicelb --disable=metrics-server" sh - && echo 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml\nalias k=kubectl\nsource /etc/bash_completion\nsource <(kubectl completion bash)' >> ~/.bashrc && systemctl enable k3s
-
+RUN  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash && curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="v1.28.15+k3s1" INSTALL_K3S_SKIP_ENABLE=true INSTALL_K3S_SKIP_START=true INSTALL_K3S_EXEC="--disable=traefik --disable=servicelb --disable=metrics-server" sh - && echo 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml\nalias k=kubectl\nsource /etc/bash_completion\nsource <(kubectl completion bash)' >> ~/.bashrc && systemctl enable k3s
 # Preload images (as in airgapped environment)
 #RUN mkdir -p /var/lib/rancher/k3s/agent/images/ && curl -L -o /var/lib/rancher/k3s/agent/images/k3s-airgap-images-amd64.tar.zst "https://github.com/k3s-io/k3s/releases/download/`k3s --version | sed -n 's|^k3s version \([^ ]*\).*$|\1|p'`/k3s-airgap-images-amd64.tar.zst"
-COPY k3s-airgap-images-amd64-filtered.tar.zst /var/lib/rancher/k3s/agent/images/k3s-airgap-images-amd64.tar.zst
+# COPY k3s-airgap-images-amd64-filtered.tar.zst /var/lib/rancher/k3s/agent/images/k3s-airgap-images-amd64.tar.zst
 
 #Local-coda specific application installation (systemd version / non-blocking entrypoint version)
 COPY localcoda.service /etc/systemd/system/localcoda.service

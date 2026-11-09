@@ -98,5 +98,7 @@ To do so, you can have a look at the images folder in this repository. A new ima
 
 The images can be built (and published) via the `backend/bin/backend_images_build.sh` script.
 
+Images build natively for the architecture of the build host (amd64 and arm64 are supported for the docker virtualization engine, so you can build and run on e.g. Apple Silicon or ARM Linux hosts). Note that the images published on Docker Hub are currently amd64 only: on arm64 hosts you should build the images locally, as the k3s image does not work under amd64 emulation. The sysbox images additionally depend on the nestybox base image, which is currently published for amd64 only.
+
 After the build of the images, you can edit the `cfg/imagemap.*` configuration file (the one for your specific virtualization engine) and add a reference to the image which will be used in your custom scenario `index.json` file (in the `backend.imageid` field)
 
